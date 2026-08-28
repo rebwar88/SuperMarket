@@ -1,146 +1,127 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Database\Seeders;
 
 use App\Domains\Auth\Models\User;
 use App\Domains\Finance\Models\Account;
+use App\Domains\Inventory\Actions\AddStockAction;
+use App\Domains\Inventory\Actions\CreateProductAction;
+use App\Domains\Inventory\Models\Category;
 use App\Domains\Inventory\Models\Unit;
 use App\Domains\Organization\Models\Company;
 use App\Domains\Organization\Models\Register;
 use App\Domains\Organization\Models\Store;
 use App\Domains\Organization\Models\Warehouse;
-use App\Domains\Settings\Models\CurrencyRate;
+use App\Domains\POS\Models\RegisterShift;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // ١. دروستکردنی دەسەڵات و ڕۆڵەکان (Roles & Permissions)
+        // ١. کۆمپانیا و لقی فرۆشگا
+        $company = Company::firstOrCreate(['name' => 'سوپەرمارکێتی کوردی']);
+        $store = Store::firstOrCreate(['name' => 'فرۆشگای سەرەکی'], [
+            'company_id' => $company->id,
+            'code' => 'ST01',
+        ]);
+        $warehouse = Warehouse::firstOrCreate(['name' => 'مەخزەنی سەرەکی'], [
+            'store_id' => $store->id,
+        ]);
+        $register = Register::firstOrCreate(['code' => 'REG01'], [
+            'store_id' => $store->id,
+            'name' => 'سندوقی ١',
+        ]);
 
-$permissions = [
-    'pos.access',
-    'pos.void_item',
-    'pos.apply_discount',
-    'pos.manager_override',
-    'inventory.manage',
-    'purchases.manage',
-    'finance.view_reports',
-    'settings.manage',
-];
+        // ٢. بەکارهێنەر و شیفتی کراوە
+        $user = User::firstOrCreate(['email' => 'cashier@market.com'], [
+            'name' => 'کاشێری سەرەکی',
+            'username' => 'cashier',
+            'password' => bcrypt('password123'),
+        ]);
 
-foreach ($permissions as $permission) {
-    Permission::findOrCreate($permission, 'web');
-}
+        RegisterShift::firstOrCreate(['register_id' => $register->id, 'status' => 'open'], [
+            'user_id' => $user->id,
+            'opening_cash' => 50000.00,
+            'opened_at' => now(),
+        ]);
 
-$adminRole = Role::findOrCreate('admin', 'web');
-$adminRole->syncPermissions(Permission::where('guard_name', 'web')->get());
+        // ٣. هەژمارە سەرەکییەکانی ژمێریاری
+        Account::firstOrCreate(['code' => '1010'], ['name' => 'سندوقی کاش', 'type' => 'asset']);
+        Account::firstOrCreate(['code' => '4010'], ['name' => 'داهاتی فرۆشتن', 'type' => 'revenue']);
+        Account::firstOrCreate(['code' => '5010'], ['name' => 'تێچووی کاڵای فرۆشراو COGS', 'type' => 'expense']);
+        Account::firstOrCreate(['code' => '1040'], ['name' => 'کۆگا و مەخزەن', 'type' => 'asset']);
 
-$cashierRole = Role::findOrCreate('cashier', 'web');
-$cashierRole->syncPermissions(['pos.access']);
+        // ٤. یەکە و کەرتەکان
+        $catFood = Category::firstOrCreate(['code' => 'CAT-FOOD'], ['name' => 'خۆراک و خواردنەوە']);
+        $catFruit = Category::firstOrCreate(['code' => 'CAT-FRUIT'], ['name' => 'میوە و سەوزەوات']);
 
-$managerRole = Role::findOrCreate('manager', 'web');
-$managerRole->syncPermissions(['pos.access', 'pos.void_item', 'pos.apply_discount', 'pos.manager_override', 'inventory.manage']);
+        $unitPcs = Unit::firstOrCreate(['short_code' => 'pcs'], ['name' => 'دانە']);
+        $unitKg = Unit::firstOrCreate(['short_code' => 'kg'], ['name' => 'کیلۆگرام']);
 
-        // ٢. پلانی ژمێریاری (Chart of Accounts)
-        $accounts = [
-            ['code' => '1010', 'name' => 'Cash on Hand (Drawer)', 'type' => 'asset'],
-            ['code' => '1020', 'name' => 'Bank Account', 'type' => 'asset'],
-            ['code' => '1030', 'name' => 'Accounts Receivable (Customer Debt)', 'type' => 'asset'],
-            ['code' => '1040', 'name' => 'Inventory Asset', 'type' => 'asset'],
-            ['code' => '2010', 'name' => 'Accounts Payable (Suppliers)', 'type' => 'liability'],
-            ['code' => '4010', 'name' => 'Sales Revenue', 'type' => 'revenue'],
-            ['code' => '5010', 'name' => 'Cost of Goods Sold (COGS)', 'type' => 'expense'],
-            ['code' => '5020', 'name' => 'Inventory Wastage Expense', 'type' => 'expense'],
-            ['code' => '6010', 'name' => 'General Store Expenses', 'type' => 'expense'],
-        ];
+        $createProduct = app(CreateProductAction::class);
+        $addStock = app(AddStockAction::class);
 
-        foreach ($accounts as $acc) {
-            Account::firstOrCreate(['code' => $acc['code']], $acc);
-        }
+        // ٥. دروستکردنی کاڵاکان بە بارکۆد و ستۆکەوە
+        
+        // شیری کالی
+        $p1 = $createProduct->execute([
+            'name' => 'شیری کالی ١ لیتر',
+            'sku' => 'MILK-01',
+            'category_id' => $catFood->id,
+            'unit_id' => $unitPcs->id,
+            'retail_price' => 1500.00,
+        ], [
+            ['code' => '869000000001', 'type' => 'unit', 'packing_qty' => 1]
+        ]);
+        $addStock->execute($p1->id, $warehouse->id, 60.0, 1100.00, 'BATCH-MILK-01');
 
-        // ٣. یەکەکانی پێوانە (Units)
-        $units = [
-            ['name' => 'Piece', 'short_code' => 'pcs', 'allow_decimal' => false],
-            ['name' => 'Kilogram', 'short_code' => 'kg', 'allow_decimal' => true],
-            ['name' => 'Gram', 'short_code' => 'g', 'allow_decimal' => true],
-            ['name' => 'Liter', 'short_code' => 'ltr', 'allow_decimal' => true],
-            ['name' => 'Pack / Box', 'short_code' => 'pack', 'allow_decimal' => false],
-        ];
+        // زەیتی زەیتوون
+        $p2 = $createProduct->execute([
+            'name' => 'زەیتی زەیتوون ٥٠٠ مل',
+            'sku' => 'OIL-02',
+            'category_id' => $catFood->id,
+            'unit_id' => $unitPcs->id,
+            'retail_price' => 4500.00,
+        ], [
+            ['code' => '869000000002', 'type' => 'unit', 'packing_qty' => 1]
+        ]);
+        $addStock->execute($p2->id, $warehouse->id, 40.0, 3500.00, 'BATCH-OIL-01');
 
-        foreach ($units as $unit) {
-            Unit::firstOrCreate(['short_code' => $unit['short_code']], $unit);
-        }
+        // ماستی خۆماڵی
+        $p3 = $createProduct->execute([
+            'name' => 'ماستی خۆماڵی ١ کیلۆیی',
+            'sku' => 'YOG-03',
+            'category_id' => $catFood->id,
+            'unit_id' => $unitPcs->id,
+            'retail_price' => 2000.00,
+        ], [
+            ['code' => '869000000003', 'type' => 'unit', 'packing_qty' => 1]
+        ]);
+        $addStock->execute($p3->id, $warehouse->id, 30.0, 1400.00, 'BATCH-YOG-01');
 
-        // ٤. کۆمپانیا، لق، مەخزەن و کاشێر (Organization)
-        $company = Company::firstOrCreate(
-            ['name' => 'SuperMarket HQ'],
-            ['tax_number' => 'TAX-2026-IQ', 'phone' => '07700000000', 'email' => 'info@market.local']
-        );
+        // نیسکافێ ٣ لە ١
+        $p4 = $createProduct->execute([
+            'name' => 'نیسکافێ کلاسیک ٣ لە ١',
+            'sku' => 'NES-04',
+            'category_id' => $catFood->id,
+            'unit_id' => $unitPcs->id,
+            'retail_price' => 500.00,
+        ], [
+            ['code' => '869000000004', 'type' => 'unit', 'packing_qty' => 1]
+        ]);
+        $addStock->execute($p4->id, $warehouse->id, 150.0, 350.00, 'BATCH-NES-01');
 
-        $store = Store::firstOrCreate(
-            ['code' => 'STR-01'],
-            [
-                'company_id' => $company->id,
-                'name' => 'Main Branch',
-                'receipt_header' => 'Welcome to SuperMarket HQ',
-                'receipt_footer' => 'Thank you for shopping with us!',
-                'status' => 'active',
-            ]
-        );
-
-        $warehouse = Warehouse::firstOrCreate(
-            ['name' => 'Retail Floor Warehouse', 'store_id' => $store->id],
-            ['type' => 'retail']
-        );
-
-        $register = Register::firstOrCreate(
-            ['code' => 'REG-01'],
-            [
-                'store_id' => $store->id,
-                'name' => 'Lane 1 (Main Cashier)',
-                'status' => 'active',
-            ]
-        );
-
-        // ٥. بەکارهێنەر و ئەدمین (Admin & Cashier Users)
-        $admin = User::firstOrCreate(
-            ['username' => 'admin'],
-            [
-                'name' => 'System Administrator',
-                'email' => 'admin@market.local',
-                'phone' => '07701234567',
-                'password' => Hash::make('password123'),
-                'pin_code' => '123456',
-                'is_active' => true,
-            ]
-        );
-        $admin->assignRole('admin');
-        $admin->stores()->syncWithoutDetaching([$store->id => ['role' => 'admin']]);
-
-        $cashier = User::firstOrCreate(
-            ['username' => 'cashier1'],
-            [
-                'name' => 'Cashier One',
-                'email' => 'cashier1@market.local',
-                'phone' => '07709876543',
-                'password' => Hash::make('password123'),
-                'pin_code' => '112233',
-                'is_active' => true,
-            ]
-        );
-        $cashier->assignRole('cashier');
-        $cashier->stores()->syncWithoutDetaching([$store->id => ['role' => 'cashier']]);
-
-        // ٦. نرخی ئاڵوگۆڕی دراو (USD to IQD)
-        CurrencyRate::firstOrCreate(
-            ['currency_code' => 'USD', 'effective_date' => now()->toDateString()],
-            ['rate' => 1500.0000]
-        );
+        // سێوی سوور
+        $p5 = $createProduct->execute([
+            'name' => 'سێوی لوبنانی پلە یەک',
+            'sku' => 'APP-05',
+            'category_id' => $catFruit->id,
+            'unit_id' => $unitKg->id,
+            'retail_price' => 1500.00,
+        ], [
+            ['code' => '210000501500', 'type' => 'weight', 'packing_qty' => 1]
+        ]);
+        $addStock->execute($p5->id, $warehouse->id, 200.0, 1000.00, 'BATCH-APP-01');
     }
 }

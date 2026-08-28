@@ -4,33 +4,30 @@ declare(strict_types=1);
 
 namespace App\Domains\POS\DTOs;
 
-use App\Domains\Inventory\Models\Product;
-
 class ScannedItemData
 {
     public function __construct(
-        public readonly Product $product,
-        public readonly string $barcode,
-        public readonly string $barcodeType,
-        public readonly float $quantity,
-        public readonly float $unitPrice,
-        public readonly float $totalPrice,
-        public readonly bool $isScaleItem = false
+        public string $productId,
+        public string $unitId,
+        public string $name,
+        public float $unitPrice,
+        public float $quantity,
+        public float $totalPrice,
+        public bool $isWeighted = false,
+        public ?string $barcode = null
     ) {}
 
     public function toArray(): array
     {
         return [
-            'product_id' => $this->product->id,
-            'name' => $this->product->name,
-            'sku' => $this->product->sku,
-            'unit' => $this->product->unit?->short_code,
-            'barcode' => $this->barcode,
-            'barcode_type' => $this->barcodeType,
-            'quantity' => $this->quantity,
+            'product_id' => $this->productId,
+            'unit_id' => $this->unitId,
+            'name' => $this->name,
             'unit_price' => $this->unitPrice,
+            'quantity' => $this->quantity,
             'total_price' => $this->totalPrice,
-            'is_scale_item' => $this->isScaleItem,
+            'is_weighted' => $this->isWeighted,
+            'barcode' => $this->barcode,
         ];
     }
 }

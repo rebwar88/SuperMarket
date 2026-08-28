@@ -4,20 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domains\Purchases\Models;
 
-use App\Support\UUID;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrder extends Model
 {
-    use UUID;
+    use HasUuids;
 
     protected $guarded = [];
-
-    protected $casts = [
-        'total_amount' => 'decimal:2',
-    ];
 
     public function supplier(): BelongsTo
     {
@@ -29,7 +25,7 @@ class PurchaseOrder extends Model
         return $this->hasMany(PurchaseOrderItem::class);
     }
 
-    public function grns(): HasMany
+    public function goodsReceivedNotes(): HasMany
     {
         return $this->hasMany(GoodsReceivedNote::class);
     }

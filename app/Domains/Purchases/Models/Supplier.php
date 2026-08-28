@@ -4,19 +4,15 @@ declare(strict_types=1);
 
 namespace App\Domains\Purchases\Models;
 
-use App\Support\UUID;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
-    use UUID;
+    use HasUuids;
 
     protected $guarded = [];
-
-    protected $casts = [
-        'total_balance' => 'decimal:2',
-    ];
 
     public function purchaseOrders(): HasMany
     {
@@ -28,7 +24,7 @@ class Supplier extends Model
         return $this->hasMany(SupplierPayment::class);
     }
 
-    public function ledgerEntries(): HasMany
+    public function ledgers(): HasMany
     {
         return $this->hasMany(SupplierLedger::class);
     }
