@@ -3,14 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بەڕێوەبردنی کۆگا و کاڵاکان - SuperMarket</title>
+    <title>کۆگا و کاڵاکان - {{ $settings['market_name'] ?? 'SuperMarket' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        * { font-family: 'Vazirmatn', sans-serif; }
-    </style>
+    <style> * { font-family: 'Vazirmatn', sans-serif; } </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
 
@@ -22,7 +18,7 @@
             </div>
             <div>
                 <h1 class="font-extrabold text-base tracking-tight text-white">بەڕێوەبردنی کۆگا و کاڵاکان</h1>
-                <p class="text-xs text-slate-400">زیادکردنی بەرهەم، چاپی بارکۆد و پسوولەی کڕین</p>
+                <p class="text-xs text-slate-400">ئاگاداری کەمبوونەوەی ستۆک: لە خوارەوەی {{ $settings['low_stock_alert'] ?? 5 }} دانە</p>
             </div>
         </div>
 
@@ -80,12 +76,15 @@
                             <th class="p-3.5">ناوی کاڵا</th>
                             <th class="p-3.5">بارکۆد</th>
                             <th class="p-3.5">کەرت (Category)</th>
-                            <th class="p-3.5">نرخی فرۆشتن (د.ع)</th>
+                            <th class="p-3.5">نرخی فرۆشتن ({{ $settings['currency_symbol'] ?? 'د.ع' }})</th>
                             <th class="p-3.5 text-center">ستۆکی بەردەست</th>
                             <th class="p-3.5 text-left">کردارەکان</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-700/40 font-medium">
+                        @php
+                            $alertThreshold = (float) ($settings['low_stock_alert'] ?? 5);
+                        @endphp
                         @forelse ($products as $p)
                             <tr class="hover:bg-slate-700/30 transition">
                                 <td class="p-3.5 font-bold text-white">{{ $p->name }}</td>
@@ -93,7 +92,7 @@
                                 <td class="p-3.5 text-slate-300">{{ $p->category->name ?? '-' }}</td>
                                 <td class="p-3.5 font-mono font-bold text-slate-200">{{ number_format((float) $p->retail_price, 0) }}</td>
                                 <td class="p-3.5 text-center">
-                                    <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold {{ ((float)$p->current_stock > 10) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30' }}">
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold {{ ((float)$p->current_stock > $alertThreshold) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse' }}">
                                         {{ (float) $p->current_stock }} {{ $p->unit->short_code ?? '' }}
                                     </span>
                                 </td>
@@ -173,11 +172,11 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-slate-300 font-bold mb-1">نرخی فرۆشتن (د.ع):</label>
+                        <label class="block text-slate-300 font-bold mb-1">نرخی فرۆشتن ({{ $settings['currency_symbol'] ?? 'د.ع' }}):</label>
                         <input type="number" step="250" name="retail_price" required placeholder="2500" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-emerald-500">
                     </div>
                     <div>
-                        <label class="block text-slate-300 font-bold mb-1">تێچووی کڕین (د.ع):</label>
+                        <label class="block text-slate-300 font-bold mb-1">تێچووی کڕین ({{ $settings['currency_symbol'] ?? 'د.ع' }}):</label>
                         <input type="number" step="250" name="cost_price" placeholder="1800" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-emerald-500">
                     </div>
                 </div>
@@ -238,7 +237,7 @@
                         <input type="number" step="0.5" name="quantity" required placeholder="100" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-slate-300 font-bold mb-1">تێچووی کڕین بۆ یەکە (د.ع):</label>
+                        <label class="block text-slate-300 font-bold mb-1">تێچووی کڕین بۆ یەکە ({{ $settings['currency_symbol'] ?? 'د.ع' }}):</label>
                         <input type="number" step="250" name="cost_price" required placeholder="1200" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-blue-500">
                     </div>
                 </div>

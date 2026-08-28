@@ -25,6 +25,16 @@ class DashboardController extends Controller
         $startDate = $request->query('start_date', Carbon::today()->startOfDay()->toDateTimeString());
         $endDate = $request->query('end_date', Carbon::today()->endOfDay()->toDateTimeString());
 
+        // هێنانی ڕێکخستنەکان
+        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $defaults = [
+            'market_name' => 'سوپەرمارکێت',
+            'currency_symbol' => 'د.ع',
+            'usd_exchange_rate' => '150000',
+            'low_stock_alert' => '5',
+        ];
+        $settings = array_merge($defaults, $settingsRaw);
+
         // ١. کۆی فرۆش و ژمارەی پسوولەکان
         $totalSales = (float) Order::whereBetween('created_at', [$startDate, $endDate])
             ->where('status', 'completed')
@@ -33,6 +43,10 @@ class DashboardController extends Controller
         $totalOrdersCount = Order::whereBetween('created_at', [$startDate, $endDate])
             ->where('status', 'completed')
             ->count();
+
+        // هەژمارکردنی فرۆش بە دۆلار بەپێی نرخی ١٠٠ دۆلاری ڕێکخستنەکان
+        $usdRateFor100 = (float) ($settings['usd_exchange_rate'] > 0 ? $settings['usd_exchange_rate'] : 150000);
+        $totalSalesUSD = $usdRateFor100 > 0 ? ($totalSales / ($usdRateFor100 / 100)) : 0.0;
 
         // ٢. تێچووی کۆگا و خەرجییەکان و قازانج
         $totalCost = 0.0;
@@ -95,7 +109,9 @@ class DashboardController extends Controller
         $activePromosCount = Schema::hasTable('promotions') ? Promotion::where('is_active', true)->count() : 0;
 
         return view('admin.dashboard', compact(
+            'settings',
             'totalSales',
+            'totalSalesUSD',
             'totalOrdersCount',
             'grossProfit',
             'netProfit',

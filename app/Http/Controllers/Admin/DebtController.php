@@ -19,11 +19,20 @@ class DebtController extends Controller
     {
         $this->ensureTablesExist();
 
+        // هێنانی ڕێکخستنەکان
+        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $defaults = [
+            'market_name' => 'سوپەرمارکێت',
+            'currency_symbol' => 'د.ع',
+            'allow_pay_later' => '1',
+        ];
+        $settings = array_merge($defaults, $settingsRaw);
+
         $customers = Party::whereIn('type', ['customer', 'both'])->latest()->get();
         $suppliers = Party::whereIn('type', ['supplier', 'both'])->latest()->get();
 
-        $totalCustomerDebt = Party::whereIn('type', ['customer', 'both'])->sum('current_balance');
-        $totalSupplierDebt = Party::whereIn('type', ['supplier', 'both'])->sum('current_balance');
+        $totalCustomerDebt = (float) Party::whereIn('type', ['customer', 'both'])->sum('current_balance');
+        $totalSupplierDebt = (float) Party::whereIn('type', ['supplier', 'both'])->sum('current_balance');
 
         $recentPayments = PartyPayment::with('party')->latest()->take(10)->get();
 
@@ -32,7 +41,8 @@ class DebtController extends Controller
             'suppliers',
             'totalCustomerDebt',
             'totalSupplierDebt',
-            'recentPayments'
+            'recentPayments',
+            'settings'
         ));
     }
 
@@ -81,7 +91,6 @@ class DebtController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        // کەمکردنەوەی باڵانسی قەرز
         if ($validated['payment_type'] === 'receipt') {
             $party->decrement('current_balance', $amount);
         } else {

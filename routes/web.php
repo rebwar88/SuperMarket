@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\Admin\AccessControlController;
 use App\Http\Controllers\Admin\AdvancedFeaturesController;
@@ -6,7 +6,9 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DebtController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\PosOrderController;
 use App\Http\Controllers\Admin\ShiftController;
+use App\Http\Controllers\Admin\SmartPaymentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Middleware\RoleOrPermissionMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -17,23 +19,30 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
     
-    Route::get('/api/auth/session-ping', function () {
-        return response()->json(['status' => 'active']);
-    })->name('auth.session.ping');
-
-    // Live Notifications API بۆ ئەدمین و خاوەنکار
+    Route::get('/api/auth/session-ping', fn() => response()->json(['status' => 'active']))->name('auth.session.ping');
     Route::get('/api/admin/notifications/poll', [NotificationController::class, 'poll'])->name('admin.notifications.poll');
     Route::post('/api/admin/notifications/mark-read', [NotificationController::class, 'markAllAsRead'])->name('admin.notifications.mark_read');
 
-    // بەڕێوەبردنی شیفتی سندوق
+    // شیفت
     Route::get('/api/shift/current', [ShiftController::class, 'getCurrentShift'])->name('shift.current');
+    Route::post('/api/shift/open', [ShiftController::class, 'openShift'])->name('shift.open');
     Route::post('/api/shift/close', [ShiftController::class, 'closeShift'])->name('shift.close');
 
-    // شاشەی سندوق
+    // پاشەکەوتکردنی وەسڵ لە سندوق
+    Route::post('/api/pos/checkout', [PosOrderController::class, 'store'])->name('pos.checkout');
+    Route::get('/api/pos/my-invoices', [PosOrderController::class, 'myInvoices'])->name('pos.my_invoices');
+
+    // پارەدانی دیجیتاڵ
+    Route::post('/api/payments/initiate', [SmartPaymentController::class, 'initiate'])->name('payment.initiate');
+    Route::post('/api/payments/confirm-manual', [SmartPaymentController::class, 'confirmManual'])->name('payment.confirm_manual');
+    Route::get('/api/payments/status/{id}', [SmartPaymentController::class, 'checkApiStatus'])->name('payment.check_status');
+
+    // سندوق
     Route::middleware([RoleOrPermissionMiddleware::class . ':pos.access'])->group(function () {
-        Route::get('/pos', function () {
-            return view('pos.index');
-        })->name('pos.index');
+        Route::get('/pos', function() {
+        $settings = \Illuminate\Support\Facades\DB::table('settings')->pluck('value', 'key')->toArray();
+        return view('pos.index', compact('settings'));
+    })->name('pos.index');
     });
 
     // داشبۆرد
@@ -69,7 +78,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/promotions', [AdvancedFeaturesController::class, 'storePromotion'])->name('admin.promotions.store');
     });
 
-    // ڕێکخستنەکان و بەڕێوەبردنی دەسەڵاتەکان
+    // ڕێکخستنەکان
     Route::middleware([RoleOrPermissionMiddleware::class . ':settings.manage'])->group(function () {
         Route::get('/settings', [AdvancedFeaturesController::class, 'settings'])->name('admin.settings.index');
         Route::post('/settings', [AdvancedFeaturesController::class, 'updateSettings'])->name('admin.settings.update');

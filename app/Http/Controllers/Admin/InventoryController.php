@@ -21,27 +21,42 @@ class InventoryController extends Controller
 {
     public function index(): View
     {
+        // ١. هێنانی ڕێکخستنەکان
+        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $defaults = [
+            'market_name' => 'سوپەرمارکێت',
+            'currency_symbol' => 'د.ع',
+            'low_stock_alert' => '5',
+        ];
+        $settings = array_merge($defaults, $settingsRaw);
+
         $products = Product::with(['category', 'unit', 'barcodes'])
             ->latest()
             ->paginate(15);
 
-        // هەژمارکردنی ستۆکی ئێستای هەر کاڵایەک لە خشتەی باچەکان
-        if (Schema::hasTable('stock_batches')) {
+        // ٢. هەژمارکردنی ستۆکی ئێستای هەر کاڵایەک لە خشتەی batches یان stock_batches
+        $stockCounts = collect();
+        if (Schema::hasTable('batches')) {
+            $stockCounts = DB::table('batches')
+                ->select('product_id', DB::raw('SUM(stock_qty) as total_qty'))
+                ->groupBy('product_id')
+                ->pluck('total_qty', 'product_id');
+        } elseif (Schema::hasTable('stock_batches')) {
             $stockCounts = DB::table('stock_batches')
                 ->select('product_id', DB::raw('SUM(remaining_quantity) as total_qty'))
                 ->groupBy('product_id')
                 ->pluck('total_qty', 'product_id');
+        }
 
-            foreach ($products as $product) {
-                $product->current_stock = (float) ($stockCounts[$product->id] ?? 0);
-            }
+        foreach ($products as $product) {
+            $product->current_stock = (float) ($stockCounts[$product->id] ?? 0);
         }
 
         $categories = Category::all();
         $units = Unit::all();
         $warehouses = Warehouse::all();
 
-        return view('admin.inventory.index', compact('products', 'categories', 'units', 'warehouses'));
+        return view('admin.inventory.index', compact('products', 'categories', 'units', 'warehouses', 'settings'));
     }
 
     public function storeProduct(Request $request, CreateProductAction $createProduct, AddStockAction $addStock): RedirectResponse

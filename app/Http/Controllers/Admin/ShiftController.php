@@ -26,18 +26,12 @@ class ShiftController extends Controller
                 ->first();
 
             if (!$shift) {
-                $register = Register::first();
-                $registerId = $register ? $register->id : 1;
-
-                $shift = Shift::create([
-                    'user_id' => $user->id,
-                    'register_id' => $registerId,
-                    'opened_at' => now(),
-                    'opening_cash' => 0,
+                return response()->json([
+                    'success' => true,
+                    'has_open_shift' => false,
                 ]);
             }
 
-            // کۆکردنەوەی فرۆشی کاشی ئەو بەکارهێنەرە لە کاتی کردنەوەی شیفتەکەیەوە
             $cashSales = (float) Order::where('user_id', $user->id)
                 ->where('payment_method', 'cash')
                 ->where('created_at', '>=', $shift->opened_at)
@@ -52,11 +46,65 @@ class ShiftController extends Controller
 
             return response()->json([
                 'success' => true,
+                'has_open_shift' => true,
                 'shift' => $shift,
                 'opening_cash' => $openingCash,
                 'cash_sales' => $cashSales,
                 'expected_cash' => $expectedCash,
                 'orders_count' => $ordersCount,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function openShift(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'opening_cash' => ['required', 'numeric', 'min:0'],
+            ]);
+
+            $user = Auth::user();
+
+            // پشکنین ئەگەر پێشتر شیفتی دانەخراوی هەبێت
+            $existing = Shift::where('user_id', $user->id)
+                ->whereNull('closed_at')
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'شیفت پێشتر کراوەتەوە.',
+                    'shift' => $existing,
+                ]);
+            }
+
+            $register = Register::first();
+            $registerId = $register ? $register->id : 1;
+
+            $shift = Shift::create([
+                'user_id' => $user->id,
+                'register_id' => $registerId,
+                'opened_at' => now(),
+                'opening_cash' => (float) $validated['opening_cash'],
+            ]);
+
+            try {
+                SystemNotification::create([
+                    'type' => 'shift_opened',
+                    'title' => 'دەستپێکردنی شیفت: ' . $user->name,
+                    'message' => "کاشێر دەستی بە کارکردن کرد بە کاشی سەرەتایی: " . number_format((float) $validated['opening_cash'], 0) . " د.ع",
+                    'severity' => 'info',
+                ]);
+            } catch (\Throwable $th) {}
+
+            return response()->json([
+                'success' => true,
+                'shift' => $shift,
             ]);
         } catch (\Throwable $e) {
             return response()->json([
@@ -120,9 +168,7 @@ class ShiftController extends Controller
                     'message' => "کاشێر شیفتەکەی داخست بە کاشی کۆتایی: " . number_format($actualCash, 0) . " د.ع" . $diffText,
                     'severity' => $severity,
                 ]);
-            } catch (\Throwable $th) {
-                // لە کاتی نەبوونی نۆتیفیکەیشن کار ناکاتە سەر دەرچوون
-            }
+            } catch (\Throwable $th) {}
 
             Auth::logout();
             $request->session()->invalidate();

@@ -3,14 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بەڕێوەبردنی قەرزەکان و دابینکەران - SuperMarket</title>
+    <title>دەفتەری حیسابات و قەرزەکان - {{ $settings['market_name'] ?? 'SuperMarket' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        * { font-family: 'Vazirmatn', sans-serif; }
-    </style>
+    <style> * { font-family: 'Vazirmatn', sans-serif; } </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
 
@@ -22,7 +18,14 @@
             </div>
             <div>
                 <h1 class="font-extrabold text-base tracking-tight text-white">دەفتەری حیسابات و قەرزەکان</h1>
-                <p class="text-xs text-slate-400">بەڕێوەبردنی قەرزی کڕیاران و حیسابی دابینکەران</p>
+                <p class="text-xs text-slate-400">
+                    فرۆشتنی قەرز لە سندوق: 
+                    @if(($settings['allow_pay_later'] ?? '1') === '1')
+                        <span class="text-emerald-400 font-bold">چالاکە ✅</span>
+                    @else
+                        <span class="text-rose-400 font-bold">ناچالاککراوە 🔒</span>
+                    @endif
+                </p>
             </div>
         </div>
 
@@ -33,7 +36,7 @@
             <a href="{{ route('admin.inventory.index') }}" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-700 transition">
                 کۆگا و کاڵاکان
             </a>
-            <a href="{{ route('pos.index') }}" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
+            <a href="{{ route('pos.index') }}" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-lg shadow-emerald-600/20">
                 شاشەی سندوق (POS)
             </a>
         </div>
@@ -47,13 +50,13 @@
             </div>
         @endif
 
-        <!-- کارتەکانی پوختەی قەرز -->
+        <!-- کارتەکانی پوختەی قەرز لەگەڵ هێمای دراو بەپێی Settings -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-slate-800/80 border border-amber-500/30 rounded-2xl p-5 shadow-sm relative overflow-hidden">
                 <div class="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
                 <span class="text-xs font-bold text-amber-400">کۆی قەرزی کڕیاران (پارەیەک کە لە دەرەوەیە)</span>
                 <div class="text-2xl font-black text-amber-400 mt-1.5 font-mono">
-                    {{ number_format((float) $totalCustomerDebt, 0) }} <span class="text-xs text-slate-400 font-sans">د.ع</span>
+                    {{ number_format((float) $totalCustomerDebt, 0) }} <span class="text-xs text-slate-400 font-sans">{{ $settings['currency_symbol'] ?? 'د.ع' }}</span>
                 </div>
                 <div class="text-xs text-slate-400 mt-2 font-mono">
                     {{ $customers->count() }} کڕیار تۆمارکراوە
@@ -64,7 +67,7 @@
                 <div class="absolute top-0 left-0 right-0 h-1 bg-rose-500"></div>
                 <span class="text-xs font-bold text-rose-400">کۆی قەرزی دابینکەران (قەرزی سەر سوپەرمارکێت)</span>
                 <div class="text-2xl font-black text-rose-400 mt-1.5 font-mono">
-                    {{ number_format((float) $totalSupplierDebt, 0) }} <span class="text-xs text-slate-400 font-sans">د.ع</span>
+                    {{ number_format((float) $totalSupplierDebt, 0) }} <span class="text-xs text-slate-400 font-sans">{{ $settings['currency_symbol'] ?? 'د.ع' }}</span>
                 </div>
                 <div class="text-xs text-slate-400 mt-2 font-mono">
                     {{ $suppliers->count() }} کۆمپانیا/دابینکەر
@@ -99,7 +102,7 @@
                             <tr>
                                 <th class="p-3">ناوی کڕیار</th>
                                 <th class="p-3">ژمارەی تەلەفۆن</th>
-                                <th class="p-3 text-left">قەرز (د.ع)</th>
+                                <th class="p-3 text-left">قەرز ({{ $settings['currency_symbol'] ?? 'د.ع' }})</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-700/40 font-medium">
@@ -133,7 +136,7 @@
                             <tr>
                                 <th class="p-3">ناوی کۆمپانیا</th>
                                 <th class="p-3">ژمارەی مۆبایل</th>
-                                <th class="p-3 text-left">بڕی قەرز (د.ع)</th>
+                                <th class="p-3 text-left">بڕی قەرز ({{ $settings['currency_symbol'] ?? 'د.ع' }})</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-700/40 font-medium">
@@ -187,7 +190,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-slate-300 font-bold mb-1">قەرزی سەرەتایی (د.ع):</label>
+                        <label class="block text-slate-300 font-bold mb-1">قەرزی سەرەتایی ({{ $settings['currency_symbol'] ?? 'د.ع' }}):</label>
                         <input type="number" step="250" name="opening_balance" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none">
                     </div>
                     <div>
@@ -217,12 +220,12 @@
                     <select name="party_id" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white outline-none">
                         <optgroup label="کڕیاران">
                             @foreach($customers as $c)
-                                <option value="{{ $c->id }}">{{ $c->name }} (قەرز: {{ number_format((float)$c->current_balance, 0) }} د.ع)</option>
+                                <option value="{{ $c->id }}">{{ $c->name }} (قەرز: {{ number_format((float)$c->current_balance, 0) }} {{ $settings['currency_symbol'] ?? 'د.ع' }})</option>
                             @endforeach
                         </optgroup>
                         <optgroup label="دابینکەران">
                             @foreach($suppliers as $s)
-                                <option value="{{ $s->id }}">{{ $s->name }} (قەرز: {{ number_format((float)$s->current_balance, 0) }} د.ع)</option>
+                                <option value="{{ $s->id }}">{{ $s->name }} (قەرز: {{ number_format((float)$s->current_balance, 0) }} {{ $settings['currency_symbol'] ?? 'د.ع' }})</option>
                             @endforeach
                         </optgroup>
                     </select>
@@ -236,7 +239,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-slate-300 font-bold mb-1">بڕی پارە (د.ع):</label>
+                        <label class="block text-slate-300 font-bold mb-1">بڕی پارە ({{ $settings['currency_symbol'] ?? 'د.ع' }}):</label>
                         <input type="number" step="250" name="amount" required placeholder="25000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-amber-500">
                     </div>
                 </div>
