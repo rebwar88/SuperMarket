@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Auth\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Spatie\Permission\Models\Role as SpatieRole;
 
-class Role extends Model
+class Role extends SpatieRole
 {
-    protected $guarded = [];
+    protected $guard_name = 'web';
 }

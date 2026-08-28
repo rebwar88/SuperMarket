@@ -4,28 +4,26 @@ declare(strict_types=1);
 
 namespace App\Domains\Finance\Models;
 
-use App\Domains\Organization\Models\Store;
-use App\Support\UUID;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Expense extends Model
 {
-    use UUID;
+    use HasUuids;
 
-    protected $guarded = [];
-
-    protected $casts = [
-        'amount' => 'decimal:2',
+    protected $fillable = [
+        'title',
+        'category',
+        'amount',
+        'expense_date',
+        'notes',
+        'user_id',
     ];
 
-    public function store(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Store::class);
-    }
-
-    public function account(): BelongsTo
-    {
-        return $this->belongsTo(Account::class);
+        return $this->belongsTo(User::class);
     }
 }

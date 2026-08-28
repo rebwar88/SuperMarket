@@ -4,21 +4,25 @@ declare(strict_types=1);
 
 namespace App\Domains\Inventory\Models;
 
-use App\Support\UUID;
+use App\Domains\Inventory\Models\Barcode;
+use App\Domains\Inventory\Models\Category;
+use App\Domains\Inventory\Models\StockBatch;
+use App\Domains\Inventory\Models\Unit;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    use UUID;
+    use HasUuids;
 
-    protected $guarded = [];
-
-    protected $casts = [
-        'cost_price' => 'decimal:2',
-        'retail_price' => 'decimal:2',
-        'is_active' => 'boolean',
+    protected $fillable = [
+        'name',
+        'sku',
+        'category_id',
+        'unit_id',
+        'retail_price',
     ];
 
     public function category(): BelongsTo
@@ -36,13 +40,13 @@ class Product extends Model
         return $this->hasMany(Barcode::class);
     }
 
-    public function batches(): HasMany
+    public function stockBatches(): HasMany
     {
-        return $this->hasMany(Batch::class);
+        return $this->hasMany(StockBatch::class);
     }
 
-    public function wastages(): HasMany
+    public function batches(): HasMany
     {
-        return $this->hasMany(Wastage::class);
+        return $this->hasMany(StockBatch::class);
     }
 }
