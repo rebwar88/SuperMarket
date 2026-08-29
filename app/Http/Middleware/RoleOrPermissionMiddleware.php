@@ -19,9 +19,30 @@ class RoleOrPermissionMiddleware
             return redirect()->route('login');
         }
 
-        // ١. ئەگەر بەکارهێنەرەکە مۆڵەتەکەی لەڕێگەی یەکێک لە ڕۆڵەکانی لە داتابەیس پێدرابێت
+        // بەدەستهێنانی ڕۆڵەکانی ئەم بەکارهێنەرە لە داتابەیس
+        $userRoles = DB::table('model_has_roles')
+            ->where(function ($q) use ($user) {
+                $q->where('model_uuid', $user->id)
+                  ->orWhere('model_uuid', (string) $user->id);
+            })
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->pluck('roles.name')
+            ->map(fn ($r) => strtolower((string) $r))
+            ->toArray();
+
+        // ڕێگەپێدانی گشتی بۆ خاوەن و بەڕێوەبەری سەرەکی
+        if (in_array('خاوەن', $userRoles, true) || in_array('super_admin', $userRoles, true) || in_array('admin', $userRoles, true) || in_array('super admin', $userRoles, true)) {
+            return $next($request);
+        }
+
+        // پشکنین بەپێی ڕۆڵی دیاریکراو
+        if (in_array(strtolower($permissionOrRole), $userRoles, true)) {
+            return $next($request);
+        }
+
+        // پشکنین بەپێی مۆڵەتی دیاریکراو
         $hasPermission = DB::table('model_has_roles')
-            ->where(function($q) use ($user) {
+            ->where(function ($q) use ($user) {
                 $q->where('model_uuid', $user->id)
                   ->orWhere('model_uuid', (string) $user->id);
             })
@@ -34,44 +55,8 @@ class RoleOrPermissionMiddleware
             return $next($request);
         }
 
-        // ٢. پشکنین ئەگەر پارامیتەرەکە ناوی ڕۆڵ بێت لەبری مۆڵەت
-        $hasRole = DB::table('model_has_roles')
-            ->where(function($q) use ($user) {
-                $q->where('model_uuid', $user->id)
-                  ->orWhere('model_uuid', (string) $user->id);
-            })
-            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-            ->where('roles.name', $permissionOrRole)
-            ->exists();
-
-        if ($hasRole) {
-            return $next($request);
-        }
-
-        // ٣. تێپەڕاندنی فەرمی بەکارهێنەر ئەگەر خاوەنی زۆرینەی مۆڵەتەکان بێت (وەک ڕۆڵی خاوەن یان Admin)
-        $userRolePermsCount = DB::table('model_has_roles')
-            ->where(function($q) use ($user) {
-                $q->where('model_uuid', $user->id)
-                  ->orWhere('model_uuid', (string) $user->id);
-            })
-            ->join('role_has_permissions', 'role_has_permissions.role_id', '=', 'model_has_roles.role_id')
-            ->count();
-
-        if ($userRolePermsCount >= 100) {
-            return $next($request);
-        }
-
-        // ئەگەر کاشێر بێت ڕەوانەی سندوق دەکرێت
-        $isCashier = DB::table('model_has_roles')
-            ->where(function($q) use ($user) {
-                $q->where('model_uuid', $user->id)
-                  ->orWhere('model_uuid', (string) $user->id);
-            })
-            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-            ->whereIn(DB::raw('LOWER(roles.name)'), ['cashier', 'کاشێر'])
-            ->exists();
-
-        if ($isCashier) {
+        // ئەگەر کاشێر بێت و مۆڵەتی نەبێت بۆ ئەم بەشە، ڕەوانەی POS دەکرێت
+        if (in_array('cashier', $userRoles, true) || in_array('کاشێر', $userRoles, true)) {
             return redirect()->route('pos.index');
         }
 

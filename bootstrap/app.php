@@ -1,6 +1,5 @@
 ﻿<?php
 
-use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\RoleOrPermissionMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,8 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->alias([
             'role_or_permission' => RoleOrPermissionMiddleware::class,
-            'permission' => CheckPermission::class,
-        ]);
+                    ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
