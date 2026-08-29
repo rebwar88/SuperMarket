@@ -98,22 +98,11 @@ Route::middleware(['auth'])->group(function () {
 
 
 
-
-
-
-
-
-
-
-
-
 Route::get('/reports/z-report/{shiftId?}', [App\Http\Controllers\Admin\ReportController::class, 'zReport'])
     ->name('admin.reports.z_report')
     ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);
 
-    ->name('admin.reports.z_report')
-    ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);
-
+    
 /* ACCESS_CONTROL_START */
 Route::middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:users.view'])->group(function () {
     Route::get('/access-control', [App\Http\Controllers\Admin\AccessControlController::class, 'index'])->name('admin.access.index');
