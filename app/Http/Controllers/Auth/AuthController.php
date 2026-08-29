@@ -4,107 +4,95 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
-use App\Domains\Auth\Models\User;
-use App\Domains\System\Models\SystemNotification;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
     public function showLoginForm(): View|RedirectResponse
     {
+        return $this->showLogin();
+    }
+
+    public function showLogin(): View|RedirectResponse
+    {
         if (Auth::check()) {
-            $user = Auth::user();
-            if ($user->hasRole('cashier') || (!$user->hasRole('super_admin') && !$user->can('dashboard.view'))) {
-                return redirect()->route('pos.index');
-            }
-            return redirect()->route('admin.dashboard');
+            return $this->redirectBasedOnRole(Auth::user());
         }
 
-        return view('auth.login');
+        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $defaults = [
+            'market_name' => 'سوپەرمارکێتی میلاد',
+            'market_slogan' => 'سیستەمی بەڕێوەبردن و فرۆشتنی پێشکەوتوو',
+            'market_logo' => '',
+            'currency_symbol' => 'د.ع',
+        ];
+        $settings = array_merge($defaults, $settingsRaw);
+
+        return view('auth.login', compact('settings'));
     }
 
     public function login(Request $request): RedirectResponse
     {
-        $credentials = $request->validate([
-            'login'    => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ], [
-            'login.required'    => 'تکایە ئیمەیڵ یان ناوی بەکارهێنەر بنووسە.',
-            'password.required' => 'تکایە وشەی نهێنی بنووسە.',
-        ]);
+        // وەرگرتنی ناسنامەی بەکارهێنەر لە ژێر هەر ناوێک بێت لە فۆڕمەکەوە
+        $loginInput = $request->input('username') ?? $request->input('email') ?? $request->input('login');
+        $password = $request->input('password');
 
-        $loginInput = trim($credentials['login']);
-        $password = $credentials['password'];
+        if (empty($loginInput) || empty($password)) {
+            return back()->withErrors([
+                'username' => 'تکایە ناوی بەکارهێنەر و وشەی نهێنی بنووسە.',
+            ])->withInput();
+        }
 
-        $user = User::where('email', $loginInput)
-            ->orWhere('username', $loginInput)
-            ->first();
+        $remember = $request->boolean('remember');
+        Session::forget('url.intended');
 
-        if ($user && Hash::check($password, $user->password)) {
-            
-            // ئەگەر کاشێر بوو و پێشتر کراوە بووبێت، ئاگادارییەکی هەستیار بۆ ئەدمین دەنێرێت
-            if ($user->hasRole('cashier') || (!$user->hasRole('super_admin') && !$user->hasRole('admin'))) {
-                if (Schema::hasTable('sessions')) {
-                    $activeSessionsCount = DB::table('sessions')->where('user_id', $user->id)->count();
-                    if ($activeSessionsCount > 0) {
-                        SystemNotification::create([
-                            'type' => 'security',
-                            'title' => 'ئاگاداریی ئاسایشی هەستیار: گۆڕینی ئامێر',
-                            'message' => "کاشێر [ {$user->name} ] لە کۆمپیوتەرێکی نوێوە لۆگین بوو و کۆمپیوتەری پێشووی خۆکارانە فڕێ درایە دەرەوە.",
-                            'severity' => 'danger',
-                        ]);
-                        DB::table('sessions')->where('user_id', $user->id)->delete();
-                    }
-                }
+        // هەوڵدان بۆ چوونەژوورەوە سەرەتا بە username پاشان بە email
+        $isLoggedIn = Auth::attempt(['username' => $loginInput, 'password' => $password], $remember)
+            || Auth::attempt(['email' => $loginInput, 'password' => $password], $remember);
 
-                // تۆمارکردنی ئاگاداری چوونەژوورەوەی کاشێر
-                SystemNotification::create([
-                    'type' => 'login',
-                    'title' => 'چوونەژوورەوەی کاشێر بۆ سندوق',
-                    'message' => "کاشێر [ {$user->name} ] لە کاتژمێر " . now()->format('H:i') . " دەستی بە کارکردن کرد.",
-                    'severity' => 'info',
-                ]);
-            }
-
-            Auth::login($user, (bool) $request->filled('remember'));
+        if ($isLoggedIn) {
             $request->session()->regenerate();
+            $user = Auth::user();
 
-            if ($user->hasRole('cashier') || (!$user->hasRole('super_admin') && !$user->can('dashboard.view'))) {
-                return redirect()->intended(route('pos.index'));
+            if (isset($user->is_active) && !$user->is_active) {
+                Auth::logout();
+                return back()->withErrors(['username' => 'ئەم هەژمارە ناچالاک کراوە.']);
             }
 
-            return redirect()->intended(route('admin.dashboard'));
+            return $this->redirectBasedOnRole($user);
         }
 
         return back()->withErrors([
-            'login' => 'ناوی بەکارهێنەر/ئیمەیڵ یان وشەی نهێنی هەڵەیە.',
-        ])->onlyInput('login');
+            'username' => 'ناوی بەکارهێنەر یان وشەی نهێنی هەڵەیە.',
+        ])->onlyInput('username');
     }
 
     public function logout(Request $request): RedirectResponse
     {
-        $user = Auth::user();
-        if ($user && ($user->hasRole('cashier') || !$user->hasRole('super_admin'))) {
-            SystemNotification::create([
-                'type' => 'logout',
-                'title' => 'دەرچوونی کاشێر لە سندوق',
-                'message' => "کاشێر [ {$user->name} ] لە کاتژمێر " . now()->format('H:i') . " لە سیستەم هاتە دەرەوە.",
-                'severity' => 'warning',
-            ]);
-        }
-
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function redirectBasedOnRole($user): RedirectResponse
+    {
+        $role = DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_uuid', $user->id)
+            ->value('roles.name');
+
+        if (strtolower((string) $role) === 'cashier') {
+            return redirect()->to('/pos');
+        }
+
+        return redirect()->to('/dashboard');
     }
 }

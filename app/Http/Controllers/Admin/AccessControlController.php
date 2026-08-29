@@ -4,47 +4,176 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domains\Auth\Models\Permission;
-use App\Domains\Auth\Models\Role;
-use App\Domains\Auth\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AccessControlController extends Controller
 {
-    private array $permissionMeta = [
-        'dashboard.view'     => ['title' => 'بینینی داشبۆرد و داتای دارایی', 'group' => 'داشبۆرد و ئامار'],
-        'pos.access'         => ['title' => 'فرۆشتن لە سندوق (POS)', 'group' => 'سندوق و فرۆشتن'],
-        'inventory.manage'   => ['title' => 'بەڕێوەبردنی کۆگا و کاڵاکان', 'group' => 'کۆگا و کاڵاکان'],
-        'inventory.purchase' => ['title' => 'تۆمارکردنی پسوولەی کڕین', 'group' => 'کۆگا و کاڵاکان'],
-        'debts.manage'       => ['title' => 'دەفتەری قەرزی کڕیار و دابینکەر', 'group' => 'قەرز و حیسابات'],
-        'expenses.manage'    => ['title' => 'تۆمارکردنی خەرجییەکان', 'group' => 'ژمێریاری و دارایی'],
-        'promotions.manage'  => ['title' => 'بەڕێوەبردنی ئۆفەر و داشکاندن', 'group' => 'سندوق و فرۆشتن'],
-        'settings.manage'    => ['title' => 'ڕێکخستنەکان و کارمەندان', 'group' => 'ڕێکخستنەکانی سیستەم'],
+    private array $kurdishRoles = [
+        'admin' => 'بەڕێوەبەری گشتی (Admin)',
+        'cashier' => 'کاشێر (سندوق و وەسڵ)',
+        'stock_manager' => 'بەڕێوەبەری کۆگا و کاڵاکان',
+        'accountant' => 'ژمێریار و حیسابات',
+        'supervisor' => 'سەرپەرشتیاری ستاف',
+    ];
+
+    private array $moduleTranslations = [
+        'products' => 'کاڵاکان و نرخ',
+        'categories' => 'گرووپ و جۆرەکان',
+        'orders' => 'فرۆشتن و پسوولەکان',
+        'order_items' => 'وردەکاری فرۆشتن',
+        'expenses' => 'خەرجییەکان',
+        'expense_categories' => 'جۆری خەرجی',
+        'customers' => 'موشتەرییەکان',
+        'suppliers' => 'دابینکەران',
+        'users' => 'کارمەندان و هەژمارەکان',
+        'roles' => 'ڕۆڵ و دەسەڵاتەکان',
+        'settings' => 'ڕێکخستنە گشتییەکان',
+        'promotions' => 'ئۆفەر و داشکاندن',
+        'reports' => 'ڕاپۆرت و شیکاری',
+        'shifts' => 'شیفت و سندوق',
+        'registers' => 'ئامێرەکانی کاشێر',
+        'batches' => 'باچ و بەسەرچوون',
+        'warehouses' => 'کۆگاکان',
+        'parties' => 'قەرزدارەکان و پارەدان',
     ];
 
     public function index(): View
     {
-        $this->syncPermissions();
+        $this->syncDynamicPermissions();
 
-        $users = User::with('roles')->latest()->get();
-        $roles = Role::with('permissions')->get();
-        
-        $permissions = Permission::all()->map(function ($perm) {
-            $meta = $this->permissionMeta[$perm->name] ?? [
-                'title' => $perm->name,
-                'group' => 'بەشەکانی تر'
-            ];
-            $perm->display_name = $meta['title'];
-            $perm->group_name = $meta['group'];
-            return $perm;
-        })->groupBy('group_name');
+        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $defaults = [
+            'market_name' => 'سوپەرمارکێتی میلاد',
+            'market_logo' => '',
+            'currency_symbol' => 'د.ع',
+        ];
+        $settings = array_merge($defaults, $settingsRaw);
 
-        return view('admin.access_control.index', compact('users', 'roles', 'permissions'));
+        // هێنانی بەکارهێنەران
+        $users = DB::table('users')
+            ->leftJoin('model_has_roles', function($join) {
+                $join->on('model_has_roles.model_uuid', '=', 'users.id')
+                     ->orOn('model_has_roles.model_uuid', '=', DB::raw('CAST(users.id AS TEXT)'));
+            })
+            ->leftJoin('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->select('users.*', 'roles.name as role_name', 'roles.id as role_id')
+            ->orderByDesc('users.created_at')
+            ->get();
+
+        // هێنانی ڕۆڵەکان لەگەڵ لیستی IDـی مۆڵەتەکانیان
+        $rolesRaw = DB::table('roles')->get();
+        $roles = $rolesRaw->map(function ($r) {
+            $r->permission_ids = DB::table('role_has_permissions')
+                ->where('role_id', $r->id)
+                ->pluck('permission_id')
+                ->toArray();
+            $r->permissions_count = count($r->permission_ids);
+            return $r;
+        });
+
+        // گروپکردنی مۆڵەتەکان بەپێی بەش (Module)
+        $allPermissions = DB::table('permissions')->get();
+        $groupedPermissions = [];
+        foreach ($allPermissions as $perm) {
+            $parts = explode('.', $perm->name);
+            $module = $parts[0] ?? 'other';
+            $groupedPermissions[$module][] = $perm;
+        }
+
+        $kurdishRoles = $this->kurdishRoles;
+        $moduleTranslations = $this->moduleTranslations;
+
+        return view('admin.access.index', compact(
+            'users',
+            'roles',
+            'groupedPermissions',
+            'settings',
+            'kurdishRoles',
+            'moduleTranslations'
+        ));
+    }
+
+    public function storeUser(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:50', 'unique:users,username'],
+            'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'password' => ['required', 'string', 'min:4'],
+            'role_id' => ['required', 'integer', 'exists:roles,id'],
+        ]);
+
+        $userId = (string) Str::uuid();
+
+        DB::table('users')->insert([
+            'id' => $userId,
+            'name' => $validated['name'],
+            'username' => $validated['username'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'is_active' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('model_has_roles')->insert([
+            'role_id' => (int) $validated['role_id'],
+            'model_type' => 'App\\Models\\User',
+            'model_uuid' => $userId,
+        ]);
+
+        return redirect()->route('admin.access.index')->with('success', 'کارمەندی نوێ بە سەرکەوتوویی تۆمارکرا.');
+    }
+
+    public function updateUser(Request $request, string $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:50', 'unique:users,username,' . $id . ',id'],
+            'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users,email,' . $id . ',id'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'password' => ['nullable', 'string', 'min:4'],
+            'role_id' => ['required', 'integer', 'exists:roles,id'],
+        ]);
+
+        $updateData = [
+            'name' => $validated['name'],
+            'username' => $validated['username'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'updated_at' => now(),
+        ];
+
+        if (!empty($validated['password'])) {
+            $updateData['password'] = Hash::make($validated['password']);
+        }
+
+        DB::table('users')->where('id', $id)->update($updateData);
+
+        DB::table('model_has_roles')->where('model_uuid', $id)->delete();
+        DB::table('model_has_roles')->insert([
+            'role_id' => (int) $validated['role_id'],
+            'model_type' => 'App\\Models\\User',
+            'model_uuid' => $id,
+        ]);
+
+        return redirect()->route('admin.access.index')->with('success', 'زانیاری و ڕۆڵی کارمەندەکە بە سەرکەوتوویی گۆڕدرا.');
+    }
+
+    public function deleteUser(string $id): RedirectResponse
+    {
+        DB::table('model_has_roles')->where('model_uuid', $id)->delete();
+        DB::table('users')->where('id', $id)->delete();
+
+        return redirect()->route('admin.access.index')->with('success', 'کارمەندەکە سڕایەوە.');
     }
 
     public function storeRole(Request $request): RedirectResponse
@@ -52,121 +181,104 @@ class AccessControlController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', 'unique:roles,name'],
             'permissions' => ['nullable', 'array'],
-        ], [
-            'name.unique' => 'ئەم ناوەی ڕۆڵ پێشتر هەیە.',
         ]);
 
-        $role = Role::create([
+        $roleId = DB::table('roles')->insertGetId([
             'name' => $validated['name'],
             'guard_name' => 'web',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         if (!empty($validated['permissions'])) {
-            $role->syncPermissions($validated['permissions']);
+            $perms = array_map(fn($pid) => [
+                'permission_id' => (int) $pid,
+                'role_id' => (int) $roleId,
+            ], $validated['permissions']);
+            DB::table('role_has_permissions')->insert($perms);
         }
 
-        return redirect()->route('admin.access.index')->with('success', 'ڕۆڵی نوێ بە سەرکەوتوویی دروستکرا.');
+        return redirect()->route('admin.access.index')->with('success', 'ڕۆڵی نوێ دروستکرا.');
     }
 
     public function updateRole(Request $request, int $id): RedirectResponse
     {
-        $role = Role::findOrFail($id);
-
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'unique:roles,name,' . $role->id],
+            'name' => ['required', 'string', 'max:100', 'unique:roles,name,' . $id . ',id'],
             'permissions' => ['nullable', 'array'],
         ]);
 
-        if ($role->name !== 'super_admin') {
-            $role->update(['name' => $validated['name']]);
-            $role->syncPermissions($validated['permissions'] ?? []);
-        }
-
-        return redirect()->route('admin.access.index')->with('success', 'ڕۆڵەکە و دەسەڵاتەکانی بە سەرکەوتوویی نوێکرانەوە.');
-    }
-
-    public function storeUser(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'username' => ['nullable', 'string', 'max:100', 'unique:users,username'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
-            'role' => ['required', 'string', 'exists:roles,name'],
-        ], [
-            'email.unique' => 'ئەم ئیمەیڵە پێشتر تۆمارکراوە.',
-            'username.unique' => 'ئەم ناوی بەکارهێنەرە پێشتر بەکارهاتووە.',
-            'password.min' => 'وشەی نهێنی نابێت لە ٦ پیت کەمتر بێت.',
-            'password.confirmed' => 'دووبارەکردنەوەی وشەی نهێنی وەک یەک نییە.',
-        ]);
-
-        $username = !empty($validated['username']) 
-            ? $validated['username'] 
-            : explode('@', $validated['email'])[0];
-
-        if (User::where('username', $username)->exists()) {
-            $username .= '_' . Str::random(3);
-        }
-
-        $user = User::create([
+        DB::table('roles')->where('id', $id)->update([
             'name' => $validated['name'],
-            'username' => $username,
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'updated_at' => now(),
         ]);
 
-        $user->assignRole($validated['role']);
+        DB::table('role_has_permissions')->where('role_id', $id)->delete();
 
-        return redirect()->route('admin.access.index')->with('success', 'کارمەند بە سەرکەوتوویی زیادکرا.');
+        if (!empty($validated['permissions'])) {
+            $perms = array_map(fn($pid) => [
+                'permission_id' => (int) $pid,
+                'role_id' => $id,
+            ], $validated['permissions']);
+            DB::table('role_has_permissions')->insert($perms);
+        }
+
+        return redirect()->route('admin.access.index')->with('success', 'دەسەڵات و توانستەکانی ڕۆڵەکە نوێکرانەوە.');
     }
 
-    public function updateUser(Request $request, string $id): RedirectResponse
+    public function deleteRole(int $id): RedirectResponse
     {
-        $user = User::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'username' => ['nullable', 'string', 'max:100', 'unique:users,username,' . $user->id],
-            'email' => ['required', 'email', 'unique:users,email,' . $user->id],
-            'password' => ['nullable', 'string', 'min:6', 'confirmed'],
-            'role' => ['required', 'string', 'exists:roles,name'],
-        ], [
-            'email.unique' => 'ئەم ئیمەیڵە پێشتر بەکارهاتووە.',
-            'username.unique' => 'ئەم ناوی بەکارهێنەرە پێشتر بەکارهاتووە.',
-            'password.confirmed' => 'دووبارەکردنەوەی وشەی نهێنی وەک یەک نییە.',
-        ]);
-
-        $user->update([
-            'name' => $validated['name'],
-            'username' => $validated['username'] ?: $user->username,
-            'email' => $validated['email'],
-        ]);
-
-        if (!empty($validated['password'])) {
-            $user->update(['password' => Hash::make($validated['password'])]);
+        $assigned = DB::table('model_has_roles')->where('role_id', $id)->count();
+        if ($assigned > 0) {
+            return redirect()->route('admin.access.index')->with('error', 'ناتوانیت ئەم ڕۆڵە بسڕیتەوە چونکە کارمەند هەیە لەسەری.');
         }
 
-        $user->syncRoles([$validated['role']]);
+        DB::table('role_has_permissions')->where('role_id', $id)->delete();
+        DB::table('roles')->where('id', $id)->delete();
 
-        return redirect()->route('admin.access.index')->with('success', 'زانیارییەکانی کارمەند بە سەرکەوتوویی نوێکرانەوە.');
+        return redirect()->route('admin.access.index')->with('success', 'ڕۆڵەکە سڕایەوە.');
     }
 
-    private function syncPermissions(): void
+    public function toggleUserStatus(string $id): RedirectResponse
     {
-        foreach (array_keys($this->permissionMeta) as $permName) {
-            Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+        $user = DB::table('users')->where('id', $id)->first();
+        if ($user) {
+            DB::table('users')->where('id', $id)->update([
+                'is_active' => $user->is_active ? 0 : 1,
+                'updated_at' => now(),
+            ]);
+        }
+        return redirect()->route('admin.access.index')->with('success', 'دۆخی کارمەندەکە گۆڕدرا.');
+    }
+
+    /**
+     * سکانکردنی داینامیکی مۆدێلەکان و داتابەیس بۆ دروستکردنی خۆکارانەی Abilities/Permissions
+     */
+    private function syncDynamicPermissions(): void
+    {
+        $actions = ['view', 'create', 'edit', 'delete'];
+        $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('migrations','cache','cache_locks','jobs','job_batches','failed_jobs','sessions','personal_access_tokens','password_reset_tokens');");
+
+        $existingPerms = DB::table('permissions')->pluck('name')->toArray();
+        $newPerms = [];
+
+        foreach ($tables as $t) {
+            $moduleName = strtolower($t->name);
+            foreach ($actions as $act) {
+                $permName = "{$moduleName}.{$act}";
+                if (!in_array($permName, $existingPerms, true)) {
+                    $newPerms[] = [
+                        'name' => $permName,
+                        'guard_name' => 'web',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
         }
 
-        $adminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-        $cashierRole = Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'web']);
-
-        if (!$cashierRole->hasPermissionTo('pos.access')) {
-            $cashierRole->givePermissionTo('pos.access');
-        }
-
-        $firstUser = User::first();
-        if ($firstUser && $firstUser->roles()->count() === 0) {
-            $firstUser->assignRole($adminRole);
+        if (!empty($newPerms)) {
+            DB::table('permissions')->insert($newPerms);
         }
     }
 }

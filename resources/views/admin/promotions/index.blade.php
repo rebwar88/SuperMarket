@@ -1,134 +1,138 @@
-<!DOCTYPE html>
-<html lang="ckb" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>ئۆفەر و داشکاندنەکان - SuperMarket</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style> * { font-family: 'Vazirmatn', sans-serif; } </style>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+@extends('layouts.admin')
 
-    <header class="bg-slate-950/80 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center font-black text-xl text-slate-950">S</div>
-            <div>
-                <h1 class="font-extrabold text-base text-white">بەڕێوەبردنی ئۆفەرەکان و داشکاندن</h1>
-                <p class="text-xs text-slate-400">ئۆفەری وەرزی، داشکاندنی ڕێژەیی و کڕینی دانەیەک و یەکێک بە خۆڕایی (BOGO)</p>
-            </div>
+@section('title', 'ئۆفەر و داشکاندنەکان')
+
+@section('content')
+    @if(session('success'))
+        <div class="bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 p-4 rounded-2xl text-xs font-bold flex items-center gap-2">
+            <span>✅</span>
+            <span>{{ session('success') }}</span>
         </div>
-        <a href="{{ route('admin.dashboard') }}" class="bg-slate-800 text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-700">داشبۆرد</a>
-    </header>
+    @endif
 
-    <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
-        @if(session('success'))
-            <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-xl text-sm font-semibold">
-                {{ session('success') }}
-            </div>
-        @endif
+    <div class="flex justify-between items-center">
+        <div>
+            <h2 class="font-extrabold text-base text-white">بەڕێوەبردنی ئۆفەر و داشکاندنەکان</h2>
+            <p class="text-xs text-slate-400">داشکاندنی ڕێژەیی، نرخی تایبەت و ئۆفەری کڕین</p>
+        </div>
+        <button onclick="document.getElementById('modal-add-promo').classList.remove('hidden')" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-lg shadow-purple-600/20 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>زیادکردنی ئۆفەری نوێ</span>
+        </button>
+    </div>
 
-        <div class="flex justify-end">
-            <button onclick="document.getElementById('modal-add-promo').classList.remove('hidden')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20">
-                + دروستکردنی ئۆفەری نوێ
-            </button>
+    <!-- خشتەی ئۆفەرەکان -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+            <h3 class="font-bold text-sm text-white">لیستی ئۆفەرە چالاکەکان</h3>
+            <span class="text-xs text-slate-400 font-mono">کۆی گشتی: {{ $promotions->total() }}</span>
         </div>
 
-        <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
             <table class="w-full text-right text-xs">
-                <thead class="bg-slate-900/60 text-slate-400 font-bold border-b border-slate-700/50">
+                <thead class="bg-slate-950/60 text-slate-400 font-bold border-b border-slate-800">
                     <tr>
                         <th class="p-3.5">ناوی ئۆفەر</th>
-                        <th class="p-3.5">کاڵا</th>
-                        <th class="p-3.5">جۆری ئۆفەر</th>
-                        <th class="p-3.5">بڕی داشکاندن / دیاری</th>
+                        <th class="p-3.5">کاڵای دیاریکراو</th>
+                        <th class="p-3.5">جۆری داشکاندن</th>
+                        <th class="p-3.5">بڕی داشکاندن</th>
                         <th class="p-3.5">ماوەی چالاکبوون</th>
                         <th class="p-3.5 text-center">دۆخ</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-700/40">
-                    @forelse($promotions as $promo)
-                        <tr class="hover:bg-slate-700/30">
+                <tbody class="divide-y divide-slate-800/60 font-medium">
+                    @forelse ($promotions as $promo)
+                        <tr class="hover:bg-slate-800/40 transition">
                             <td class="p-3.5 font-bold text-white">{{ $promo->name }}</td>
-                            <td class="p-3.5 text-slate-300">{{ $promo->product->name ?? '-' }}</td>
+                            <td class="p-3.5 text-slate-300">{{ $promo->product_name ?? 'سەرجەم کاڵاکان' }}</td>
                             <td class="p-3.5">
-                                <span class="bg-slate-700 px-2 py-0.5 rounded text-[11px] font-semibold">
-                                    {{ $promo->type === 'percentage' ? 'ڕێژەی %' : ($promo->type === 'bogo' ? 'BOGO دیاری' : 'داشکاندنی نەختینە') }}
+                                <span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[11px] font-semibold border border-slate-700/50">
+                                    {{ $promo->type === 'percentage' ? 'داشکاندنی ڕێژەیی (%)' : ($promo->type === 'fixed_price' ? 'نرخی دیاریکراو' : 'Buy X Get Y') }}
                                 </span>
                             </td>
-                            <td class="p-3.5 font-mono font-bold text-emerald-400">
-                                @if($promo->type === 'percentage')
-                                    {{ $promo->discount_value }}%
-                                @elseif($promo->type === 'bogo')
-                                    {{ $promo->buy_quantity }} بکڕە + {{ $promo->get_quantity }} بە خۆڕایی
-                                @else
-                                    {{ number_format((float) $promo->discount_value, 0) }} د.ع
-                                @endif
+                            <td class="p-3.5 font-mono font-bold text-emerald-400 text-sm">
+                                {{ $promo->type === 'percentage' ? $promo->discount_value . '%' : number_format((float) $promo->discount_value, 0) . ' ' . ($settings['currency_symbol'] ?? 'د.ع') }}
                             </td>
-                            <td class="p-3.5 font-mono text-slate-400 text-[11px]">{{ $promo->start_date }} تا {{ $promo->end_date }}</td>
+                            <td class="p-3.5 font-mono text-slate-400">
+                                {{ $promo->start_date ? $promo->start_date . ' بۆ ' . ($promo->end_date ?? 'بەردەوام') : 'هەمیشەیی' }}
+                            </td>
                             <td class="p-3.5 text-center">
-                                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400">چالاکە</span>
+                                <form action="{{ route('admin.promotions.toggle', $promo->id) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="px-2.5 py-1 rounded-lg text-xs font-bold transition {{ $promo->is_active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-500 border border-slate-700' }}">
+                                        {{ $promo->is_active ? 'چالاکە' : 'ناچالاکە' }}
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="p-6 text-center text-slate-500">هیچ ئۆفەرێک دیاری نەکراوە.</td></tr>
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-500">هیچ ئۆفەرێک تۆمار نەکراوە.</td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-    </main>
 
-    <!-- مۆداڵی ئۆفەر -->
+        <div class="p-4 border-t border-slate-800/60">
+            {{ $promotions->links() }}
+        </div>
+    </div>
+
+    <!-- مۆداڵی زیادکردنی ئۆفەر -->
     <div id="modal-add-promo" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 max-w-md w-full rounded-2xl shadow-2xl p-5 space-y-4">
-            <h3 class="font-bold text-sm text-white">دروستکردنی ئۆفەری نوێ</h3>
-            <form action="{{ route('admin.promotions.store') }}" method="POST" class="space-y-3 text-xs">
+        <div class="bg-slate-900 border border-slate-800 max-w-md w-full rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-slate-950 px-5 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-bold text-sm text-white">تۆمارکردنی ئۆفەری نوێ</h3>
+                <button onclick="document.getElementById('modal-add-promo').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold">&times;</button>
+            </div>
+            <form action="{{ route('admin.promotions.store') }}" method="POST" class="p-5 space-y-4 text-xs">
                 @csrf
                 <div>
                     <label class="block text-slate-300 font-bold mb-1">ناوی ئۆفەر:</label>
-                    <input type="text" name="name" required placeholder="داشکاندنی کۆتایی هەفتە" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none">
+                    <input type="text" name="name" required placeholder="وەک: داشکاندنی جەژن یان ئۆفەری شیرینی" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-purple-500">
                 </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-bold mb-1">جۆری ئۆفەر:</label>
+                        <select name="type" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white outline-none">
+                            <option value="percentage">داشکاندنی سەدی (%)</option>
+                            <option value="fixed_price">نرخی دیاریکراو</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-bold mb-1">بڕی داشکاندن:</label>
+                        <input type="number" step="0.5" name="discount_value" required placeholder="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-purple-500">
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-slate-300 font-bold mb-1">کاڵا:</label>
-                    <select name="product_id" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white outline-none">
-                        @foreach($products as $p)
-                            <option value="{{ $p->id }}">{{ $p->name }} ({{ number_format((float)$p->retail_price, 0) }} د.ع)</option>
+                    <label class="block text-slate-300 font-bold mb-1">کاڵای دیاریکراو (ئیختیاری):</label>
+                    <select name="product_id" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white outline-none">
+                        <option value="">سەرجەم کاڵاکان</option>
+                        @foreach($products as $prod)
+                            <option value="{{ $prod->id }}">{{ $prod->name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div>
-                    <label class="block text-slate-300 font-bold mb-1">جۆری داشکاندن:</label>
-                    <select name="type" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white outline-none">
-                        <option value="percentage">داشکاندن بە ڕێژەی لەسەدا (%)</option>
-                        <option value="fixed_discount">داشکاندنی نەختینە بە بڕی دیاریکراو (د.ع)</option>
-                        <option value="bogo">دانەیەک بکڕە + دیاری وەربگرە (BOGO)</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-slate-300 font-bold mb-1">بڕی داشکاندن (% یان د.ع):</label>
-                        <input type="number" step="0.5" name="discount_value" placeholder="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-slate-300 font-bold mb-1">بڕی کڕین بۆ BOGO:</label>
-                        <input type="number" step="1" name="buy_quantity" placeholder="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none">
-                    </div>
-                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-slate-300 font-bold mb-1">دەستپێک:</label>
-                        <input type="datetime-local" name="start_date" value="{{ date('Y-m-d\T00:00') }}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-white outline-none">
+                        <input type="date" name="start_date" value="{{ date('Y-m-d') }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-purple-500">
                     </div>
                     <div>
                         <label class="block text-slate-300 font-bold mb-1">کۆتایی:</label>
-                        <input type="datetime-local" name="end_date" value="{{ date('Y-m-d\T23:59', strtotime('+7 days')) }}" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-white outline-none">
+                        <input type="date" name="end_date" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-purple-500">
                     </div>
                 </div>
-                <div class="pt-2 flex gap-2">
-                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl">تۆمارکردن</button>
-                    <button type="button" onclick="document.getElementById('modal-add-promo').classList.add('hidden')" class="bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl">داخستن</button>
+
+                <div class="pt-3 flex gap-2">
+                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition">تۆمارکردن</button>
+                    <button type="button" onclick="document.getElementById('modal-add-promo').classList.add('hidden')" class="bg-slate-800 text-slate-300 px-4 py-3 rounded-xl">داخستن</button>
                 </div>
             </form>
         </div>
     </div>
-</body>
-</html>
+@endsection

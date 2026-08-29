@@ -1,37 +1,22 @@
-<!DOCTYPE html>
-<html lang="ckb" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سندوقی فرۆشتن - {{ $settings['market_name'] ?? 'POS' }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style> 
-        * { font-family: 'Vazirmatn', sans-serif; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        @media print {
-            body * { visibility: hidden; }
-            #thermal-receipt-area, #thermal-receipt-area * { visibility: visible; }
-            #thermal-receipt-area { 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 80mm; 
-                display: block !important; 
-                padding: 4px;
-                color: #000 !important;
-                background: #fff !important;
-            }
-        }
-    </style>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col select-none">
+﻿@extends('layouts.admin')
+
+@section('title', 'سندوقی فرۆشتن (POS)')
+
+@section('content')
+<script>
+    window.systemTimezone = "{{ $settings['timezone'] ?? config('app.timezone', 'Asia/Baghdad') }}";
+    var systemTimezone = window.systemTimezone;
+</script>
+
 
     <!-- سەرپەڕەی سندوق -->
     <header class="bg-slate-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between sticky top-0 z-40">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-black text-lg text-slate-950 shadow-lg shadow-emerald-500/20">S</div>
+            @if(!empty($settings['market_logo']))
+                <img src="{{ $settings['market_logo'] }}" alt="Logo" class="w-9 h-9 object-contain rounded-xl bg-white p-0.5 shadow-lg">
+            @else
+                <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-black text-lg text-slate-950 shadow-lg shadow-emerald-500/20">S</div>
+            @endif
             <div>
                 <h1 class="font-extrabold text-sm text-white flex items-center gap-2">
                     <span>{{ $settings['market_name'] ?? 'سیستەمی سندوق (POS)' }}</span>
@@ -139,14 +124,14 @@
         </div>
     </div>
 
-    <!-- مۆداڵی تایبەت بە بینینی وەسڵەکانی ئەم کاشێرە -->
+    <!-- مۆداڵی وەسڵەکانی کاشێر -->
     <div id="modal-my-invoices" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-teal-500/40 max-w-2xl w-full rounded-3xl p-6 shadow-2xl space-y-4 text-right flex flex-col max-h-[85vh]" dir="rtl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2.5">
                     <div class="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl font-bold">🧾</div>
                     <div>
-                        <h3 class="font-black text-sm text-white">وەسڵەکانی ئەم کاشێرە (My Invoices)</h3>
+                        <h3 class="font-black text-sm text-white">وەسڵەکانی ئەم کاشێرە</h3>
                         <p class="text-[10px] text-slate-400">تەنها وەسڵەکانی خۆت پیشان دەدرێن</p>
                     </div>
                 </div>
@@ -260,11 +245,19 @@
     </div>
 
     <!-- ========================================== -->
-    <!--  چاپی گەرمی پێشکەوتووی 80mm لەگەڵ نرخی تاک  -->
+    <!--  چاپی گەرمی 80mm لەگەڵ لۆگۆ و دەقی خاوێنکراوە  -->
     <!-- ========================================== -->
     <div id="thermal-receipt-area" class="hidden text-black bg-white p-2 font-mono text-[11px] leading-tight">
         <div class="text-center pb-2 border-b border-dashed border-black">
+            @if(!empty($settings['market_logo']))
+                <div class="flex justify-center mb-1">
+                    <img src="{{ $settings['market_logo'] }}" alt="Logo" class="max-h-12 max-w-[120px] object-contain filter grayscale contrast-200">
+                </div>
+            @endif
             <h2 class="font-bold text-base">{{ $settings['market_name'] ?? 'سوپەرمارکێت' }}</h2>
+            @if(!empty($settings['market_slogan']))
+                <div class="text-[9px] text-gray-700 font-normal">{{ $settings['market_slogan'] }}</div>
+            @endif
             @if(!empty($settings['phone']) || !empty($settings['address']))
                 <div class="text-[9px] text-gray-800 mt-0.5">{{ $settings['phone'] ?? '' }} | {{ $settings['address'] ?? '' }}</div>
             @endif
@@ -318,12 +311,13 @@
             </div>
         </div>
 
-        <div class="text-center pt-3 mt-2 border-t border-dashed border-black text-[9px] leading-relaxed">
-            {{ $settings['receipt_footer'] ?? 'سوپاس بۆ سەردانەکەتان، کاڵای فرۆشراو دەگۆڕدرێتەوە لە ماوەی ٢٤ کاتژمێردا.' }}
+        <!-- تەنها فوتەری داینامیکی بەبێ دەقی زیادە -->
+        <div class="text-center pt-2 mt-2 border-t border-dashed border-black text-[9px] leading-normal font-bold">
+            {{ $settings['receipt_footer'] ?? 'سوپاس بۆ سەردانەکەتان' }}
         </div>
     </div>
 
-    <!-- مۆداڵی دەستپێکردنی شیفت -->
+    <!-- مۆداڵی شیفت -->
     <div id="modal-start-shift" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-emerald-500/40 max-w-sm w-full rounded-3xl p-6 shadow-2xl space-y-4 text-right" dir="rtl">
             <div class="flex items-center gap-3">
@@ -740,14 +734,9 @@
                 }
                 renderTabs();
             })
-            .catch(err => {
-                console.error(err);
-            });
+            .catch(err => console.error(err));
         }
 
-        // ===============================================
-        //  فەنکشنی چاپی وەسڵ لەگەڵ پیشاندانی نرخی ١ دانە
-        // ===============================================
         function printReceiptPayload(data) {
             document.getElementById('receipt-date-time').innerText = data.created_at || new Date().toLocaleString('en-GB');
             document.getElementById('receipt-invoice-no').innerText = 'ژ.پسوولە: ' + data.invoice_no;
@@ -787,7 +776,6 @@
                 delivSec.classList.add('hidden');
             }
 
-            // هێنان و پیشاندانی ناوی کاڵا، ژمارەی دانە، نرخی تاک، و کۆی گشتی
             document.getElementById('receipt-items-tbody').innerHTML = data.items.map(i => {
                 const name = i.name || i.product_name || 'کاڵا';
                 const qty = parseInt(i.qty || i.quantity) || 1;
@@ -846,9 +834,7 @@
                 });
         }
 
-        function closeMyInvoicesModal() {
-            document.getElementById('modal-my-invoices').classList.add('hidden');
-        }
+        function closeMyInvoicesModal() { document.getElementById('modal-my-invoices').classList.add('hidden'); }
 
         function reprintMyInvoice(index) {
             const ord = myInvoicesCache[index];
@@ -869,7 +855,7 @@
 
         function updateClock() {
             const timeEl = document.getElementById('system-time');
-            if (timeEl) timeEl.innerText = new Date().toLocaleTimeString('en-GB');
+            if (timeEl) timeEl.innerText = new Date().toLocaleTimeString('en-GB', { timeZone: systemTimezone, hour12: false });
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -934,5 +920,5 @@
         renderTabs();
         renderProductsGrid();
     </script>
-</body>
-</html>
+
+@endsection

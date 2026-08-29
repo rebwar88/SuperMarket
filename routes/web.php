@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\Admin\AccessControlController;
 use App\Http\Controllers\Admin\AdvancedFeaturesController;
@@ -84,12 +84,43 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/settings', [AdvancedFeaturesController::class, 'updateSettings'])->name('admin.settings.update');
         Route::get('/reports/z-report/{shiftId}', [AdvancedFeaturesController::class, 'zReport'])->name('admin.reports.z_report');
         
-        Route::get('/access-control', [AccessControlController::class, 'index'])->name('admin.access.index');
-        Route::get('/access-control/users', fn() => redirect()->route('admin.access.index'));
-        Route::get('/access-control/roles', fn() => redirect()->route('admin.access.index'));
-        Route::post('/access-control/roles', [AccessControlController::class, 'storeRole'])->name('admin.access.role.store');
-        Route::post('/access-control/roles/{id}', [AccessControlController::class, 'updateRole'])->name('admin.access.role.update');
-        Route::post('/access-control/users', [AccessControlController::class, 'storeUser'])->name('admin.access.user.store');
-        Route::post('/access-control/users/{id}', [AccessControlController::class, 'updateUser'])->name('admin.access.user.update');
+        
+    
+        
+        
+        
+        
+        
+        
     });
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Route::get('/access-control', [App\Http\Controllers\Admin\AccessControlController::class, 'index'])->name('admin.access.index');
+Route::post('/access-control/users', [App\Http\Controllers\Admin\AccessControlController::class, 'storeUser'])->name('admin.access.users.store');
+Route::put('/access-control/users/{id}', [App\Http\Controllers\Admin\AccessControlController::class, 'updateUser'])->name('admin.access.users.update');
+Route::delete('/access-control/users/{id}', [App\Http\Controllers\Admin\AccessControlController::class, 'deleteUser'])->name('admin.access.users.delete');
+Route::post('/access-control/users/{id}/toggle', [App\Http\Controllers\Admin\AccessControlController::class, 'toggleUserStatus'])->name('admin.access.users.toggle');
+Route::post('/access-control/roles', [App\Http\Controllers\Admin\AccessControlController::class, 'storeRole'])->name('admin.access.roles.store');
+Route::put('/access-control/roles/{id}', [App\Http\Controllers\Admin\AccessControlController::class, 'updateRole'])->name('admin.access.roles.update');
+Route::delete('/access-control/roles/{id}', [App\Http\Controllers\Admin\AccessControlController::class, 'deleteRole'])->name('admin.access.roles.delete');
+
+Route::get('/reports/z-report/{shiftId?}', [App\Http\Controllers\Admin\ReportController::class, 'zReport'])
+    ->name('admin.reports.z_report')
+    ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);
+
+Route::get('/reports/z-report/{shiftId?}', [App\Http\Controllers\Admin\ReportController::class, 'zReport'])
+    ->name('admin.reports.z_report')
+    ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);

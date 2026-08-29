@@ -4,53 +4,85 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domains\POS\Models\Order;
-use App\Domains\POS\Models\RegisterShift;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ReportController extends Controller
 {
-    public function zReport(string $shiftId): View
+    public function zReport(Request $request, ?string $shiftId = null): View
     {
-        $shift = RegisterShift::with(['user', 'register'])->findOrFail($shiftId);
-
-        // ١. هێنانی ڕێکخستنەکان
         $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
         $defaults = [
-            'market_name' => 'سوپەرمارکێت',
-            'phone' => '',
-            'address' => '',
-            'receipt_header' => 'ڕاپۆرتی کۆتایی شیفت (Z-REPORT)',
-            'receipt_footer' => 'سوپاس بۆ خزمەتکردنتان',
+            'market_name' => 'سوپەرمارکێتی میلاد',
+            'market_phone' => '07700000000',
+            'market_address' => 'سلێمانی',
             'currency_symbol' => 'د.ع',
         ];
         $settings = array_merge($defaults, $settingsRaw);
 
-        // ٢. وەسڵەکانی پەیوەست بەم شیفتە
-        $orders = Order::where('register_shift_id', $shift->id)
-            ->where('status', 'completed')
+        // هێنانی سەرجەم شیفتەکان بۆ لیستی هەڵبژاردن
+        $allShifts = DB::table('shifts')
+            ->leftJoin('users', 'users.id', '=', 'shifts.user_id')
+            ->leftJoin('registers', 'registers.id', '=', 'shifts.register_id')
+            ->select('shifts.*', 'users.name as cashier_name', 'registers.name as register_name')
+            ->orderByDesc('shifts.created_at')
             ->get();
 
-        $totalCashSales = (float) $orders->where('payment_method', 'cash')->sum('grand_total');
-        $totalCreditSales = (float) $orders->where('payment_method', 'debt')->sum('grand_total');
-        $totalCardSales = (float) $orders->whereIn('payment_method', ['online', 'card'])->sum('grand_total');
-        $totalCodSales = (float) $orders->where('payment_method', 'cod')->sum('grand_total');
-        $totalDiscountsGiven = (float) $orders->sum('discount_amount');
+        // دیاریکردنی شیفتی مەبەست (یان ئەوەی داواکراوە یان دواین شیفت)
+        if ($shiftId) {
+            $shift = DB::table('shifts')->where('id', $shiftId)->first();
+        } else {
+            $shift = DB::table('shifts')->orderByDesc('created_at')->first();
+        }
 
-        return view('admin.reports.z_report', [
-            'shift' => $shift,
-            'orders' => $orders,
-            'totalCashSales' => $totalCashSales,
-            'totalCreditSales' => $totalCreditSales,
-            'totalCardSales' => $totalCardSales,
-            'totalCodSales' => $totalCodSales,
-            'totalDiscountsGiven' => $totalDiscountsGiven,
-            'settings' => $settings,
-            'marketName' => $settings['market_name'],
-            'receiptFooter' => $settings['receipt_footer'],
-            'currencySymbol' => $settings['currency_symbol'],
-        ]);
+        $summary = [
+            'total_orders' => 0,
+            'subtotal' => 0.0,
+            'discount_total' => 0.0,
+            'tax_total' => 0.0,
+            'grand_total' => 0.0,
+            'cash_sales' => 0.0,
+            'card_sales' => 0.0,
+            'debt_sales' => 0.0,
+            'total_items_sold' => 0,
+        ];
+
+        $cashier = null;
+        $register = null;
+
+        if ($shift) {
+            $cashier = DB::table('users')->where('id', $shift->user_id)->first();
+            $register = DB::table('registers')->where('id', $shift->register_id)->first();
+
+            // دۆزینەوەی فەرمانەکانی ئەم شیفتە لەڕێگەی register_shift_id
+            $orders = DB::table('orders')
+                ->where('register_shift_id', $shift->id)
+                ->get();
+
+            $summary['total_orders'] = $orders->count();
+            $summary['subtotal'] = (float) $orders->sum('subtotal');
+            $summary['discount_total'] = (float) $orders->sum('discount_amount');
+            $summary['tax_total'] = (float) $orders->sum('tax_amount');
+            $summary['grand_total'] = (float) $orders->sum('grand_total');
+
+            // دۆزینەوەی بڕی کاڵا فرۆشراوەکان
+            $orderIds = $orders->pluck('id')->toArray();
+            if (!empty($orderIds)) {
+                $summary['total_items_sold'] = (int) DB::table('order_items')
+                    ->whereIn('order_id', $orderIds)
+                    ->sum('quantity');
+            }
+        }
+
+        return view('admin.reports.z_report', compact(
+            'shift',
+            'allShifts',
+            'summary',
+            'cashier',
+            'register',
+            'settings'
+        ));
     }
 }

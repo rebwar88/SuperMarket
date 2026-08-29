@@ -1,0 +1,647 @@
+=== DATABASE SCHEMA REPORT ===
+
+### Table: [accounts]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - code : varchar NOT NULL
+  - name : varchar NOT NULL
+  - type : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [audit_logs]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - user_id : varchar
+  - store_id : varchar
+  - action : varchar NOT NULL
+  - auditable_type : varchar
+  - auditable_id : varchar
+  - old_values : TEXT
+  - new_values : TEXT
+  - reason : TEXT
+  - ip_address : varchar
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [barcodes]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - product_id : varchar NOT NULL
+  - code : varchar NOT NULL
+  - type : varchar NOT NULL
+  - packing_qty : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [batches]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - product_id : varchar NOT NULL
+  - warehouse_id : varchar NOT NULL
+  - batch_number : varchar NOT NULL
+  - stock_qty : numeric NOT NULL
+  - purchase_cost : numeric NOT NULL
+  - expiry_date : date
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [cache]
+  - key : varchar (PRIMARY KEY) NOT NULL
+  - value : TEXT NOT NULL
+  - expiration : INTEGER NOT NULL
+
+### Table: [cache_locks]
+  - key : varchar (PRIMARY KEY) NOT NULL
+  - owner : varchar NOT NULL
+  - expiration : INTEGER NOT NULL
+
+### Table: [cash_transactions]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - register_shift_id : varchar NOT NULL
+  - type : varchar NOT NULL
+  - amount : numeric NOT NULL
+  - reason : TEXT
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [categories]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - parent_id : varchar
+  - name : varchar NOT NULL
+  - code : varchar
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [companies]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - tax_number : varchar
+  - phone : varchar
+  - email : varchar
+  - address : TEXT
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [coupons]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - code : varchar NOT NULL
+  - discount_value : numeric NOT NULL
+  - type : varchar NOT NULL
+  - expires_at : datetime
+  - is_active : tinyint(1) NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [currency_rates]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - currency_code : varchar NOT NULL
+  - rate : numeric NOT NULL
+  - effective_date : date NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [customer_addresses]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - customer_id : varchar NOT NULL
+  - label : varchar NOT NULL
+  - address_line : TEXT NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [customer_groups]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - discount_percent : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [customers]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - customer_group_id : varchar
+  - name : varchar NOT NULL
+  - phone : varchar
+  - total_debt : numeric NOT NULL
+  - debt_limit : numeric NOT NULL
+  - is_active : tinyint(1) NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [daily_sales_summaries]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - store_id : varchar NOT NULL
+  - report_date : date NOT NULL
+  - total_sales : numeric NOT NULL
+  - total_gross_profit : numeric NOT NULL
+  - total_transactions : INTEGER NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [expense_categories]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [expenses]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - store_id : varchar NOT NULL
+  - account_id : varchar NOT NULL
+  - amount : numeric NOT NULL
+  - description : TEXT
+  - created_at : datetime
+  - updated_at : datetime
+  - category_id : varchar
+
+### Table: [failed_jobs]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - uuid : varchar NOT NULL
+  - connection : varchar NOT NULL
+  - queue : varchar NOT NULL
+  - payload : TEXT NOT NULL
+  - exception : TEXT NOT NULL
+  - failed_at : datetime NOT NULL
+
+### Table: [goods_received_notes]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - purchase_order_id : varchar NOT NULL
+  - grn_number : varchar NOT NULL
+  - received_at : datetime NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [job_batches]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - total_jobs : INTEGER NOT NULL
+  - pending_jobs : INTEGER NOT NULL
+  - failed_jobs : INTEGER NOT NULL
+  - failed_job_ids : TEXT NOT NULL
+  - options : TEXT
+  - cancelled_at : INTEGER
+  - created_at : INTEGER NOT NULL
+  - finished_at : INTEGER
+
+### Table: [jobs]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - queue : varchar NOT NULL
+  - payload : TEXT NOT NULL
+  - attempts : INTEGER NOT NULL
+  - reserved_at : INTEGER
+  - available_at : INTEGER NOT NULL
+  - created_at : INTEGER NOT NULL
+
+### Table: [journal_entries]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - order_id : varchar
+  - purchase_order_id : varchar
+  - source_type : varchar NOT NULL
+  - posted_at : datetime NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [journal_entry_lines]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - journal_entry_id : varchar NOT NULL
+  - account_id : varchar NOT NULL
+  - debit : numeric NOT NULL
+  - credit : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [loyalty_accounts]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - customer_id : varchar NOT NULL
+  - points_balance : INTEGER NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [loyalty_transactions]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - loyalty_account_id : varchar NOT NULL
+  - points : INTEGER NOT NULL
+  - type : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [migrations]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - migration : varchar NOT NULL
+  - batch : INTEGER NOT NULL
+
+### Table: [model_has_permissions]
+  - permission_id : INTEGER (PRIMARY KEY) NOT NULL
+  - model_type : varchar (PRIMARY KEY) NOT NULL
+  - model_uuid : INTEGER (PRIMARY KEY) NOT NULL
+
+### Table: [model_has_roles]
+  - role_id : INTEGER (PRIMARY KEY) NOT NULL
+  - model_type : varchar (PRIMARY KEY) NOT NULL
+  - model_uuid : INTEGER (PRIMARY KEY) NOT NULL
+
+### Table: [offline_transactions]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - register_id : varchar NOT NULL
+  - payload : TEXT NOT NULL
+  - sync_status : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [order_items]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - order_id : varchar NOT NULL
+  - product_id : varchar NOT NULL
+  - promotion_id : varchar
+  - quantity : numeric NOT NULL
+  - unit_price : numeric NOT NULL
+  - total_price : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [orders]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - invoice_number : varchar NOT NULL
+  - store_id : varchar NOT NULL
+  - register_shift_id : varchar NOT NULL
+  - customer_id : varchar
+  - user_id : varchar NOT NULL
+  - subtotal : numeric NOT NULL
+  - discount_amount : numeric NOT NULL
+  - tax_amount : numeric NOT NULL
+  - grand_total : numeric NOT NULL
+  - paid_amount : numeric NOT NULL
+  - change_due : numeric NOT NULL
+  - status : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+  - invoice_no : TEXT
+  - shift_id : INTEGER
+  - discount : NUMERIC
+  - payment_method : TEXT
+  - payment_status : TEXT
+  - reference_no : TEXT
+  - customer_name : TEXT
+  - customer_phone : TEXT
+  - customer_address : TEXT
+
+### Table: [parties]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - phone : varchar
+  - type : varchar NOT NULL
+  - credit_limit : numeric NOT NULL
+  - current_balance : numeric NOT NULL
+  - account_id : varchar
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [party_payments]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - party_id : varchar NOT NULL
+  - amount : numeric NOT NULL
+  - payment_type : varchar NOT NULL
+  - payment_method : varchar NOT NULL
+  - notes : varchar
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [password_reset_tokens]
+  - email : varchar (PRIMARY KEY) NOT NULL
+  - token : varchar NOT NULL
+  - created_at : datetime
+
+### Table: [payment_transactions]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - order_id : varchar
+  - user_id : varchar NOT NULL
+  - gateway : varchar NOT NULL
+  - amount : numeric NOT NULL
+  - currency : varchar NOT NULL
+  - status : varchar NOT NULL
+  - reference_no : varchar
+  - gateway_transaction_id : varchar
+  - qr_code_data : TEXT
+  - payload : TEXT
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [payments]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - order_id : varchar NOT NULL
+  - method : varchar NOT NULL
+  - amount : numeric NOT NULL
+  - currency : varchar NOT NULL
+  - exchange_rate : numeric NOT NULL
+  - reference_number : varchar
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [permissions]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - guard_name : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [personal_access_tokens]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - tokenable_type : varchar NOT NULL
+  - tokenable_id : INTEGER NOT NULL
+  - name : TEXT NOT NULL
+  - token : varchar NOT NULL
+  - abilities : TEXT
+  - last_used_at : datetime
+  - expires_at : datetime
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [price_rules]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - product_id : varchar NOT NULL
+  - scope : varchar NOT NULL
+  - min_qty : numeric NOT NULL
+  - price : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [product_profitability_snapshots]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - product_id : varchar NOT NULL
+  - snapshot_date : date NOT NULL
+  - margin_percent : numeric NOT NULL
+  - units_sold : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [products]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - category_id : varchar
+  - unit_id : varchar NOT NULL
+  - name : varchar NOT NULL
+  - sku : varchar
+  - cost_price : numeric NOT NULL
+  - retail_price : numeric NOT NULL
+  - alert_quantity : INTEGER NOT NULL
+  - is_active : tinyint(1) NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [promotions]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - type : varchar NOT NULL
+  - discount_value : numeric NOT NULL
+  - is_active : tinyint(1) NOT NULL
+  - starts_at : datetime
+  - ends_at : datetime
+  - created_at : datetime
+  - updated_at : datetime
+  - product_id : varchar
+
+### Table: [purchase_order_items]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - purchase_order_id : varchar NOT NULL
+  - product_id : varchar NOT NULL
+  - quantity : numeric NOT NULL
+  - cost_price : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [purchase_orders]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - supplier_id : varchar NOT NULL
+  - po_number : varchar NOT NULL
+  - total_amount : numeric NOT NULL
+  - status : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [register_shifts]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - register_id : varchar NOT NULL
+  - user_id : varchar NOT NULL
+  - opening_cash : numeric NOT NULL
+  - closing_cash : numeric
+  - cash_difference : numeric
+  - status : varchar NOT NULL
+  - opened_at : datetime NOT NULL
+  - closed_at : datetime
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [registers]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - store_id : varchar NOT NULL
+  - name : varchar NOT NULL
+  - code : varchar NOT NULL
+  - status : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [return_order_items]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - return_order_id : varchar NOT NULL
+  - product_id : varchar NOT NULL
+  - quantity : numeric NOT NULL
+  - refund_price : numeric NOT NULL
+  - condition : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [return_orders]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - order_id : varchar NOT NULL
+  - user_id : varchar NOT NULL
+  - refund_amount : numeric NOT NULL
+  - status : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [role_has_permissions]
+  - permission_id : INTEGER (PRIMARY KEY) NOT NULL
+  - role_id : INTEGER (PRIMARY KEY) NOT NULL
+
+### Table: [roles]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - guard_name : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [sessions]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - user_id : varchar
+  - ip_address : varchar
+  - user_agent : TEXT
+  - payload : TEXT NOT NULL
+  - last_activity : INTEGER NOT NULL
+
+### Table: [settings]
+  - key : varchar (PRIMARY KEY) NOT NULL
+  - value : TEXT
+
+### Table: [shifts]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - user_id : varchar NOT NULL
+  - register_id : INTEGER
+  - opened_at : datetime NOT NULL
+  - closed_at : datetime
+  - opening_cash : numeric NOT NULL
+  - closing_cash : numeric
+  - notes : TEXT
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [stock_allocations]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - order_item_id : varchar NOT NULL
+  - batch_id : varchar NOT NULL
+  - quantity : numeric NOT NULL
+  - unit_cost : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [stock_count_items]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - stock_count_id : varchar NOT NULL
+  - product_id : varchar NOT NULL
+  - counted_qty : numeric NOT NULL
+  - system_qty : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [stock_counts]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - warehouse_id : varchar NOT NULL
+  - status : varchar NOT NULL
+  - counted_at : datetime
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [stock_movements]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - batch_id : varchar
+  - warehouse_id : varchar NOT NULL
+  - type : varchar NOT NULL
+  - quantity : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [stock_reservations]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - product_id : varchar NOT NULL
+  - order_id : varchar
+  - quantity : numeric NOT NULL
+  - expires_at : datetime NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [store_settings]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - store_id : varchar NOT NULL
+  - key : varchar NOT NULL
+  - value : TEXT
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [store_users]
+  - store_id : varchar (PRIMARY KEY) NOT NULL
+  - user_id : varchar (PRIMARY KEY) NOT NULL
+  - role : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [stores]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - company_id : varchar NOT NULL
+  - name : varchar NOT NULL
+  - code : varchar NOT NULL
+  - phone : varchar
+  - address : TEXT
+  - receipt_header : varchar
+  - receipt_footer : varchar
+  - status : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [supplier_ledger]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - supplier_id : varchar NOT NULL
+  - entry_type : varchar NOT NULL
+  - amount : numeric NOT NULL
+  - running_balance : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [supplier_payments]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - supplier_id : varchar NOT NULL
+  - amount : numeric NOT NULL
+  - payment_method : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [suppliers]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - phone : varchar
+  - email : varchar
+  - total_balance : numeric NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [suspended_orders]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - register_id : varchar NOT NULL
+  - user_id : varchar NOT NULL
+  - cart_data : TEXT NOT NULL
+  - parked_at : datetime NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [system_notifications]
+  - id : INTEGER (PRIMARY KEY) NOT NULL
+  - type : varchar NOT NULL
+  - title : varchar NOT NULL
+  - message : TEXT NOT NULL
+  - severity : varchar NOT NULL
+  - is_read : tinyint(1) NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [units]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - short_code : varchar NOT NULL
+  - allow_decimal : tinyint(1) NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [users]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - name : varchar NOT NULL
+  - username : varchar NOT NULL
+  - email : varchar
+  - phone : varchar
+  - email_verified_at : datetime
+  - password : varchar NOT NULL
+  - pin_code : varchar
+  - is_active : tinyint(1) NOT NULL
+  - remember_token : varchar
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [warehouses]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - store_id : varchar
+  - name : varchar NOT NULL
+  - type : varchar NOT NULL
+  - location : TEXT
+  - created_at : datetime
+  - updated_at : datetime
+
+### Table: [wastages]
+  - id : varchar (PRIMARY KEY) NOT NULL
+  - product_id : varchar NOT NULL
+  - batch_id : varchar
+  - quantity : numeric NOT NULL
+  - reason : varchar NOT NULL
+  - created_at : datetime
+  - updated_at : datetime
+
