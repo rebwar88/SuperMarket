@@ -23,18 +23,18 @@ class ReportController extends Controller
         $settings = array_merge($defaults, $settingsRaw);
 
         // هێنانی سەرجەم شیفتەکان بۆ لیستی هەڵبژاردن
-        $allShifts = DB::table('shifts')
-            ->leftJoin('users', 'users.id', '=', 'shifts.user_id')
-            ->leftJoin('registers', 'registers.id', '=', 'shifts.register_id')
-            ->select('shifts.*', 'users.name as cashier_name', 'registers.name as register_name')
-            ->orderByDesc('shifts.created_at')
+        $allShifts = DB::table('register_shifts')
+            ->leftJoin('users', 'users.id', '=', 'register_shifts.user_id')
+            ->leftJoin('registers', 'registers.id', '=', 'register_shifts.register_id')
+            ->select('register_shifts.*', 'users.name as cashier_name', 'registers.name as register_name')
+            ->orderByDesc('register_shifts.created_at')
             ->get();
 
         // دیاریکردنی شیفتی مەبەست (یان ئەوەی داواکراوە یان دواین شیفت)
         if ($shiftId) {
-            $shift = DB::table('shifts')->where('id', $shiftId)->first();
+            $shift = DB::table('register_shifts')->where('id', $shiftId)->first();
         } else {
-            $shift = DB::table('shifts')->orderByDesc('created_at')->first();
+            $shift = DB::table('register_shifts')->orderByDesc('created_at')->first();
         }
 
         $summary = [

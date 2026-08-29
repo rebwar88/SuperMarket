@@ -5,213 +5,137 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Domains\POS\Actions\ProcessCheckoutAction;
+use App\Domains\POS\DTOs\CheckoutData;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class PosOrderController extends Controller
 {
-    /**
-     * هێنانی لیستی ئەو وەسڵانەی کە تەنها ئەم کاشێرە خۆی تۆماری کردوون
-     */
-    public function myInvoices(): JsonResponse
-    {
-        $userId = (string) (Auth::id() ?? DB::table('users')->value('id'));
+    public function __construct(
+        private readonly ProcessCheckoutAction $checkoutAction
+    ) {}
 
-        // هێنانی وەسڵەکان بە تەنها بۆ ئەم کاشێرە
-        $orders = DB::table('orders')
-            ->where('user_id', $userId)
-            ->latest('created_at')
-            ->take(30)
-            ->get();
-
-        $result = $orders->map(function ($order) {
-            $items = DB::table('order_items')
-                ->where('order_id', $order->id)
-                ->get();
-
-            return [
-                'id' => $order->id,
-                'invoice_no' => $order->invoice_number ?? $order->invoice_no,
-                'grand_total' => (float) $order->grand_total,
-                'payment_method' => $order->payment_method,
-                'payment_status' => $order->payment_status,
-                'reference_no' => $order->reference_no,
-                'customer_name' => $order->customer_name,
-                'customer_phone' => $order->customer_phone,
-                'customer_address' => $order->customer_address,
-                'created_at' => $order->created_at,
-                'items_count' => $items->count(),
-                'items' => $items->map(fn($item) => [
-                    'name' => $item->product_name ?? 'کاڵا',
-                    'qty' => (int) $item->quantity,
-                    'price' => (float) $item->unit_price,
-                    'total' => (float) $item->total_price,
-                ]),
-            ];
-        });
-
-        return response()->json([
-            'success' => true,
-            'orders' => $result,
-        ]);
-    }
-
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'items' => ['required', 'array', 'min:1'],
-                'items.*.id' => ['nullable'],
-                'items.*.name' => ['required', 'string'],
-                'items.*.price' => ['required', 'numeric', 'min:0'],
-                'items.*.qty' => ['required', 'numeric', 'min:1'],
-                'payment_method' => ['required', 'string'],
-                'reference_no' => ['nullable', 'string'],
-                'is_cod' => ['nullable'],
-                'customer_name' => ['nullable', 'string', 'max:255'],
-                'customer_phone' => ['nullable', 'string', 'max:50'],
-                'customer_address' => ['nullable', 'string', 'max:500'],
-            ]);
+            $user = Auth::user();
+            $items = $request->input('items', []);
 
-            return DB::transaction(function () use ($validated) {
-                $user = Auth::user();
-                $userId = (string) ($user->id ?? DB::table('users')->value('id'));
+            if (empty($items)) {
+                return response()->json(['success' => false, 'message' => 'کابینەی فرۆشتن بەتاڵە'], 400);
+            }
 
-                $store = DB::table('stores')->first();
-                $storeId = (string) ($store->id ?? Str::uuid());
+            // ١. دۆزینەوەی شیفتی کراوەی ئەم کاشێرە
+            $shift = DB::table('register_shifts')
+                ->where('user_id', $user->id)
+                ->whereNull('closed_at')
+                ->first();
 
-                $shift = DB::table('register_shifts')
-                    ->where('user_id', $userId)
-                    ->where('status', 'open')
-                    ->latest('opened_at')
-                    ->first();
-
-                if (!$shift) {
-                    $register = DB::table('registers')->first();
-                    $registerId = (string) ($register->id ?? Str::uuid());
-                    
-                    $shiftId = (string) Str::uuid();
-                    DB::table('register_shifts')->insert([
-                        'id' => $shiftId,
-                        'register_id' => $registerId,
-                        'user_id' => $userId,
-                        'opening_cash' => 0,
-                        'status' => 'open',
-                        'opened_at' => now(),
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                } else {
-                    $shiftId = (string) $shift->id;
-                }
-
-                $method = $validated['payment_method'];
-                $isCod = !empty($validated['is_cod']) && $validated['is_cod'] !== 'false';
-                
-                if ($isCod) {
-                    $method = 'cod';
-                }
-
-                $paymentStatus = match ($method) {
-                    'pay_now', 'cash', 'pay_online', 'online' => 'paid',
-                    'pay_later', 'debt' => 'debt',
-                    'cod' => 'pending',
-                    default => 'paid',
-                };
-
-                $dbMethod = match ($method) {
-                    'pay_now' => 'cash',
-                    'pay_online' => 'online',
-                    'pay_later' => 'debt',
-                    'cod' => 'cod',
-                    default => $method,
-                };
-
-                $total = 0;
-                foreach ($validated['items'] as $item) {
-                    $total += ((float)$item['price'] * (int)$item['qty']);
-                }
-
-                $invoiceNumber = ($isCod ? 'COD-' : 'INV-') . strtoupper(Str::random(8));
-                $orderUuid = (string) Str::uuid();
-                $defaultDbProductId = DB::table('products')->value('id') ?? (string) Str::uuid();
-
-                DB::table('orders')->insert([
-                    'id' => $orderUuid,
-                    'invoice_number' => $invoiceNumber,
-                    'invoice_no' => $invoiceNumber,
-                    'store_id' => $storeId,
-                    'register_shift_id' => $shiftId,
-                    'customer_id' => null,
-                    'user_id' => $userId,
-                    'subtotal' => $total,
-                    'discount_amount' => 0,
-                    'discount' => 0,
-                    'tax_amount' => 0,
-                    'grand_total' => $total,
-                    'paid_amount' => ($paymentStatus === 'paid' ? $total : 0),
-                    'change_due' => 0,
-                    'status' => 'completed',
-                    'payment_method' => $dbMethod,
-                    'payment_status' => $paymentStatus,
-                    'reference_no' => $validated['reference_no'] ?? null,
-                    'customer_name' => $validated['customer_name'] ?? null,
-                    'customer_phone' => $validated['customer_phone'] ?? null,
-                    'customer_address' => $validated['customer_address'] ?? null,
+            if (!$shift) {
+                // ئەگەر شیفتی نەبوو، بە خێرایی بۆی دروست دەکەین
+                $register = DB::table('registers')->first();
+                $shiftId = Str::uuid()->toString();
+                DB::table('register_shifts')->insert([
+                    'id' => $shiftId,
+                    'user_id' => $user->id,
+                    'register_id' => $register->id ?? null,
+                    'opened_at' => now(),
+                    'opening_cash' => 0,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+                $shift = clone (object) ['id' => $shiftId, 'register_id' => $register->id ?? null];
+            }
 
-                foreach ($validated['items'] as $item) {
-                    $pId = $item['id'] ?? null;
-                    if (!$pId || !DB::table('products')->where('id', $pId)->exists()) {
-                        $pId = $defaultDbProductId;
-                    }
+            $storeId = DB::table('registers')->where('id', $shift->register_id)->value('store_id');
 
-                    DB::table('order_items')->insert([
-                        'id' => (string) Str::uuid(),
-                        'order_id' => $orderUuid,
-                        'product_id' => (string) $pId,
-                        'promotion_id' => null,
-                        'quantity' => (int) $item['qty'],
-                        'unit_price' => (float) $item['price'],
-                        'total_price' => (float) $item['price'] * (int) $item['qty'],
+            // ٢. دروستکردن یان دۆزینەوەی کڕیار ئەگەر ناوی نێردرابوو (بۆ مەبەستی قەرز)
+            $customerId = null;
+            if (!empty($request->customer_name)) {
+                $customer = DB::table('customers')->where('phone', $request->customer_phone)->first();
+                if ($customer) {
+                    $customerId = $customer->id;
+                } else {
+                    $customerId = Str::uuid()->toString();
+                    DB::table('customers')->insert([
+                        'id' => $customerId,
+                        'name' => $request->customer_name,
+                        'phone' => $request->customer_phone,
+                        'total_debt' => 0,
+                        'is_active' => true,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
                 }
+            }
 
-                if ($dbMethod === 'online' || !empty($validated['reference_no'])) {
-                    DB::table('payment_transactions')->insert([
-                        'order_id' => $orderUuid,
-                        'user_id' => $userId,
-                        'gateway' => 'pos_card',
-                        'amount' => $total,
-                        'currency' => 'IQD',
-                        'status' => 'completed',
-                        'reference_no' => $validated['reference_no'] ?? null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
+            // ٣. حیسابکردنی پارێزراوی کۆی گشتی لەسەر بنەمای کاڵاکان
+            $subtotal = 0.0;
+            $processedItems = [];
 
-                return response()->json([
-                    'success' => true,
-                    'order_id' => $orderUuid,
-                    'invoice_no' => $invoiceNumber,
-                    'grand_total' => $total,
-                    'created_at' => now()->format('Y-m-d H:i:s'),
-                ]);
-            });
+            foreach ($items as $item) {
+                // وەرگرتنی ئایدی و نرخ بەپێی ئەوەی جاڤاسکریپتەکە چۆن دەینێرێت
+                $productId = $item['product_id'] ?? $item['id'] ?? null;
+                $qty = (float) ($item['quantity'] ?? 1);
+                $price = (float) ($item['unit_price'] ?? $item['price'] ?? 0);
+                
+                if (!$productId) continue;
+
+                $rowTotal = $qty * $price;
+                $subtotal += $rowTotal;
+
+                $processedItems[] = [
+                    'product_id' => $productId,
+                    'quantity' => $qty,
+                    'unit_price' => $price,
+                    'total_price' => $rowTotal
+                ];
+            }
+
+            if (empty($processedItems)) {
+                return response()->json(['success' => false, 'message' => 'هیچ کاڵایەکی دروست نەدۆزرایەوە'], 400);
+            }
+
+            // ٤. دیاریکردنی شێوازی پارەدان و بڕی قەرز
+            $paymentMethod = strtolower((string) $request->input('payment_method', 'cash'));
+            
+            // ئەگەر نەقد بوو بڕی پارەکە تەواوە، ئەگەر قەرز بوو بڕی وەرگیراو سفرە
+            $paidAmount = ($request->is_cod || in_array($paymentMethod, ['debt', 'credit'])) ? 0.0 : $subtotal;
+
+            // ٥. پڕکردنەوەی DTO بۆ ناردنی بۆ ڕێڕەوە سەرەکییەکەی ProcessCheckoutAction
+            $dto = CheckoutData::fromArray([
+                'store_id' => $storeId ?? Str::uuid()->toString(),
+                'register_id' => (string) $shift->register_id,
+                'register_shift_id' => (string) $shift->id,
+                'user_id' => (string) $user->id,
+                'customer_id' => $customerId,
+                'subtotal' => $subtotal,
+                'discount_amount' => 0.0,
+                'tax_amount' => 0.0,
+                'grand_total' => $subtotal,
+                'paid_amount' => $paidAmount,
+                'change_due' => 0.0,
+                'payment_method' => $paymentMethod,
+                'items' => $processedItems,
+            ]);
+
+            // ٦. جێبەجێکردنی پرۆسەکە (بڕینی ستۆک، قەیدی ژمێریاری، و باڵانسی قەرز بە یەکجار)
+            $order = $this->checkoutAction->execute($dto);
+
+            return response()->json([
+                'success' => true,
+                'invoice_no' => $order->invoice_number,
+                'grand_total' => $order->grand_total,
+            ]);
+
         } catch (\Throwable $e) {
-            Log::error('POS Order Error: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('POS Checkout Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'هەڵەیەک ڕوویدا لە کاتی جێبەجێکردنی فرۆشتنەکە: ' . $e->getMessage()
             ], 500);
         }
     }
