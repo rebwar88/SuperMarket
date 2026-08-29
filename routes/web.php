@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\Admin\AccessControlController;
 use App\Http\Controllers\Admin\AdvancedFeaturesController;
@@ -82,7 +82,6 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware([RoleOrPermissionMiddleware::class . ':settings.manage'])->group(function () {
         Route::get('/settings', [AdvancedFeaturesController::class, 'settings'])->name('admin.settings.index');
         Route::post('/settings', [AdvancedFeaturesController::class, 'updateSettings'])->name('admin.settings.update');
-        Route::get('/reports/z-report/{shiftId}', [AdvancedFeaturesController::class, 'zReport'])->name('admin.reports.z_report');
         
         
     
@@ -112,7 +111,6 @@ Route::get('/reports/z-report/{shiftId?}', [App\Http\Controllers\Admin\ReportCon
     ->name('admin.reports.z_report')
     ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);
 
-Route::get('/reports/z-report/{shiftId?}', [App\Http\Controllers\Admin\ReportController::class, 'zReport'])
     ->name('admin.reports.z_report')
     ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);
 
