@@ -25,8 +25,8 @@ class AuthController extends Controller
             return $this->redirectBasedOnRole(Auth::user());
         }
 
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
-        $defaults = [
+            $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray(); 
+                   $defaults = [
             'market_name' => 'سوپەرمارکێتی میلاد',
             'market_slogan' => 'سیستەمی بەڕێوەبردن و فرۆشتنی پێشکەوتوو',
             'market_logo' => '',
