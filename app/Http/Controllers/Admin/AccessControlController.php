@@ -47,7 +47,7 @@ class AccessControlController extends Controller
     {
         $this->syncDynamicPermissions();
 
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
         $defaults = [
             'market_name' => 'سوپەرمارکێتی میلاد',
             'market_logo' => '',
@@ -59,7 +59,7 @@ class AccessControlController extends Controller
         $users = DB::table('users')
             ->leftJoin('model_has_roles', function($join) {
                 $join->on('model_has_roles.model_uuid', '=', 'users.id')
-                     ->orOn('model_has_roles.model_uuid', '=', DB::raw('CAST(users.id AS TEXT)'));
+                     ->orOn('model_has_roles.model_uuid', '=', DB::raw('CAST(users.id AS CHAR)'));
             })
             ->leftJoin('roles', 'roles.id', '=', 'model_has_roles.role_id')
             ->select('users.*', 'roles.name as role_name', 'roles.id as role_id')
@@ -257,7 +257,8 @@ class AccessControlController extends Controller
     private function syncDynamicPermissions(): void
     {
         $actions = ['view', 'create', 'edit', 'delete'];
-        $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('migrations','cache','cache_locks','jobs','job_batches','failed_jobs','sessions','personal_access_tokens','password_reset_tokens');");
+        $databaseName = DB::getDatabaseName();
+        $tables = DB::select("SELECT TABLE_NAME as name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE'", [$databaseName]);
 
         $existingPerms = DB::table('permissions')->pluck('name')->toArray();
         $newPerms = [];

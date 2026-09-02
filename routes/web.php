@@ -40,7 +40,7 @@ Route::middleware(['auth'])->group(function () {
     // سندوق
     Route::middleware([RoleOrPermissionMiddleware::class . ':pos.access'])->group(function () {
         Route::get('/pos', function() {
-        $settings = \Illuminate\Support\Facades\DB::table('settings')->pluck('value', 'key')->toArray();
+        $settings = \Illuminate\Support\Facades\DB::table('store_settings')->pluck('value', 'key')->toArray();
         return view('pos.index', compact('settings'));
     })->name('pos.index');
     });

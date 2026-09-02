@@ -22,7 +22,7 @@ class InventoryController extends Controller
     public function index(): View
     {
         // ١. هێنانی ڕێکخستنەکان
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
         $defaults = [
             'market_name' => 'سوپەرمارکێت',
             'currency_symbol' => 'د.ع',

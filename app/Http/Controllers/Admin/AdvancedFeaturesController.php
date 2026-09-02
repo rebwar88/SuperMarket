@@ -20,7 +20,7 @@ class AdvancedFeaturesController extends Controller
 {
     public function settings(): View
     {
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
 
         $defaults = [
             'market_name' => 'سوپەرمارکێتی میلاد',
@@ -60,7 +60,7 @@ class AdvancedFeaturesController extends Controller
         }
 
         foreach ($data as $key => $value) {
-            DB::table('settings')->updateOrInsert(
+            DB::table('store_settings')->updateOrInsert(
                 ['key' => $key],
                 ['value' => (string) ($value ?? '')]
             );
@@ -73,7 +73,7 @@ class AdvancedFeaturesController extends Controller
     {
         $this->ensureExpenseTablesExist();
 
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
         $defaults = [
             'market_name' => 'سوپەرمارکێت',
             'currency_symbol' => 'د.ع',
@@ -82,12 +82,12 @@ class AdvancedFeaturesController extends Controller
 
         $now = Carbon::now();
         $totalExpensesThisMonth = (float) DB::table('expenses')
-            ->whereYear('expense_date', $now->year)
-            ->whereMonth('expense_date', $now->month)
+            ->whereYear('created_at', $now->year)
+            ->whereMonth('created_at', $now->month)
             ->sum('amount');
 
         $totalExpensesToday = (float) DB::table('expenses')
-            ->whereDate('expense_date', Carbon::today())
+            ->whereDate('created_at', Carbon::today())
             ->sum('amount');
 
         $hasCategoryCol = Schema::hasColumn('expenses', 'category_id');
@@ -100,7 +100,7 @@ class AdvancedFeaturesController extends Controller
             $query->select('expenses.*', DB::raw("'گشتی' as category_name"));
         }
 
-        $expenses = $query->orderByDesc('expenses.expense_date')
+        $expenses = $query->orderByDesc('expenses.created_at')
             ->orderByDesc('expenses.created_at')
             ->paginate(15);
 
@@ -123,7 +123,7 @@ class AdvancedFeaturesController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:1'],
             'category_id' => ['nullable', 'string'],
-            'expense_date' => ['required', 'date'],
+            'created_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -131,7 +131,7 @@ class AdvancedFeaturesController extends Controller
             'id' => (string) Str::uuid(),
             'title' => $validated['title'],
             'amount' => (float) $validated['amount'],
-            'expense_date' => $validated['expense_date'],
+            'created_at' => $validated['created_at'],
             'notes' => $validated['notes'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
@@ -171,7 +171,7 @@ class AdvancedFeaturesController extends Controller
                 $table->string('title');
                 $table->decimal('amount', 15, 2);
                 $table->uuid('category_id')->nullable();
-                $table->date('expense_date');
+                $table->date('created_at');
                 $table->text('notes')->nullable();
                 $table->timestamps();
             });
@@ -188,7 +188,7 @@ class AdvancedFeaturesController extends Controller
     {
         $this->ensurePromotionTablesExist();
 
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
         $defaults = [
             'market_name' => 'سوپەرمارکێت',
             'currency_symbol' => 'د.ع',
@@ -301,7 +301,7 @@ class AdvancedFeaturesController extends Controller
             ];
         }
 
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
         $defaults = [
             'market_name' => 'سوپەرمارکێتی میلاد',
             'market_logo' => '',

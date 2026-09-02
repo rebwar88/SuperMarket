@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $endDate = $request->query('end_date', Carbon::today()->endOfDay()->toDateTimeString());
 
         // هێنانی ڕێکخستنەکان
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
         $defaults = [
             'market_name' => 'سوپەرمارکێت',
             'currency_symbol' => 'د.ع',

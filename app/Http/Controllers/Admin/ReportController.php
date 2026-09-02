@@ -13,7 +13,7 @@ class ReportController extends Controller
 {
     public function zReport(Request $request, ?string $shiftId = null): View
     {
-        $settingsRaw = DB::table('settings')->pluck('value', 'key')->toArray();
+        $settingsRaw = DB::table('store_settings')->pluck('value', 'key')->toArray();
         $defaults = [
             'market_name' => 'سوپەرمارکێتی میلاد',
             'market_phone' => '07700000000',
