@@ -62,7 +62,7 @@ class DashboardController extends Controller
         // خەرجییەکانی ئەمڕۆ
         $todayExpenses = 0.0;
         if (Schema::hasTable('expenses')) {
-            $todayExpenses = (float) Expense::whereDate('expense_date', Carbon::today())->sum('amount');
+            $todayExpenses = (float) Expense::whereDate('created_at', Carbon::today())->sum('amount');
         }
 
         $grossProfit = (float) ($totalSales - $totalCost);
