@@ -55,7 +55,15 @@ class POSController extends Controller
                 'opening_cash' => (float) $validated['opening_cash'],
             ]);
 
-            $shift = $action->execute($data);
+                        $openShift = \Illuminate\Support\Facades\DB::table('register_shifts')
+                ->where('register_id', $validated['register_id'])
+                ->where('user_id', $data->user_id)
+                ->whereNull('closed_at')
+                ->first();
+            if (!$openShift) {
+                throw new Exception('هیچ شیفتێکی کراوە نەدۆزرایەوە بۆ داخستن.');
+            }
+            $shift = $action->execute((string) $openShift->id, $data);
 
             return response()->json([
                 'success' => true,
@@ -84,7 +92,15 @@ class POSController extends Controller
                 'closing_cash' => (float) $validated['closing_cash'],
             ]);
 
-            $shift = $action->execute($data);
+                        $openShift = \Illuminate\Support\Facades\DB::table('register_shifts')
+                ->where('register_id', $validated['register_id'])
+                ->where('user_id', $data->user_id)
+                ->whereNull('closed_at')
+                ->first();
+            if (!$openShift) {
+                throw new Exception('هیچ شیفتێکی کراوە نەدۆزرایەوە بۆ داخستن.');
+            }
+            $shift = $action->execute((string) $openShift->id, $data);
 
             return response()->json([
                 'success' => true,
@@ -116,6 +132,21 @@ class POSController extends Controller
         ]);
 
         try {
+            $recalculatedSubtotal = 0.0;
+            foreach ($validated['items'] as &$item) {
+                $productId = $item['product_id'] ?? $item['id'] ?? null;
+                if ($productId) {
+                    $dbProduct = \Illuminate\Support\Facades\DB::table('products')->where('id', $productId)->first();
+                    if ($dbProduct) {
+                        $item['unit_price'] = (float) $dbProduct->retail_price;
+                        $item['total_price'] = (float) ($item['unit_price'] * (float) ($item['quantity'] ?? 1));
+                    }
+                }
+                $recalculatedSubtotal += (float) ($item['total_price'] ?? 0);
+            }
+            $validated['subtotal'] = $recalculatedSubtotal;
+            $validated['grand_total'] = $recalculatedSubtotal - (float) ($validated['discount_amount'] ?? 0) + (float) ($validated['tax_amount'] ?? 0);
+
             $checkoutData = CheckoutData::fromArray(array_merge(
                 $validated,
                 ['user_id' => $request->user()?->id ?? 'default-user']
