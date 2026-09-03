@@ -69,11 +69,20 @@ class ProcessCheckoutAction
             $cogsAccount = Account::where('code', '5010')->first();
             $inventoryAccount = Account::where('code', '1040')->first();
 
+            $arAccount = Account::firstOrCreate(['code' => '1200'], ['name' => 'Accounts Receivable (قەرزەکان)', 'type' => 'asset', 'is_active' => true]);
+
             if ($cashAccount && $salesAccount) {
-                $lines = [
-                    ['account_id' => $cashAccount->id, 'debit' => $data->grand_total, 'credit' => 0],
-                    ['account_id' => $salesAccount->id, 'debit' => 0, 'credit' => $data->grand_total],
-                ];
+                $lines = [];
+                $lines[] = ['account_id' => $salesAccount->id, 'debit' => 0, 'credit' => $data->grand_total];
+                
+                if ($data->paid_amount > 0) {
+                    $lines[] = ['account_id' => $cashAccount->id, 'debit' => $data->paid_amount, 'credit' => 0];
+                }
+                
+                $debt = $data->grand_total - $data->paid_amount;
+                if ($debt > 0) {
+                    $lines[] = ['account_id' => $arAccount->id, 'debit' => $debt, 'credit' => 0];
+                }
 
                 if ($cogsAccount && $inventoryAccount && $totalCost > 0) {
                     $lines[] = ['account_id' => $cogsAccount->id, 'debit' => $totalCost, 'credit' => 0];

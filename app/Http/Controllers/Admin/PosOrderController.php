@@ -79,10 +79,13 @@ class PosOrderController extends Controller
             foreach ($items as $item) {
                 // وەرگرتنی ئایدی و نرخ بەپێی ئەوەی جاڤاسکریپتەکە چۆن دەینێرێت
                 $productId = $item['product_id'] ?? $item['id'] ?? null;
-                $qty = (float) ($item['quantity'] ?? 1);
-                $price = (float) ($item['unit_price'] ?? $item['price'] ?? 0);
-                
                 if (!$productId) continue;
+
+                $product = DB::table('products')->where('id', $productId)->first();
+                if (!$product) continue;
+
+                $qty = (float) ($item['quantity'] ?? 1);
+                $price = (float) $product->retail_price;
 
                 $rowTotal = $qty * $price;
                 $subtotal += $rowTotal;

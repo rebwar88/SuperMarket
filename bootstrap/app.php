@@ -22,7 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->alias([
             'role_or_permission' => RoleOrPermissionMiddleware::class,
-                    ]);
+            'verify_shift' => \App\Http\Middleware\VerifyShiftOpen::class,
+            'manager_pin' => \App\Http\Middleware\RequireManagerPin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\Admin\AccessControlController;
 use App\Http\Controllers\Admin\AdvancedFeaturesController;
@@ -26,21 +26,21 @@ Route::middleware(['auth'])->group(function () {
     // شیفت
     Route::get('/api/shift/current', [ShiftController::class, 'getCurrentShift'])->name('shift.current');
     Route::post('/api/shift/open', [ShiftController::class, 'openShift'])->name('shift.open');
-    Route::post('/api/shift/close', [ShiftController::class, 'closeShift'])->name('shift.close')->middleware('verify_shift');
+    Route::post('/api/shift/close', [ShiftController::class, 'closeShift'])->name('shift.close');
 
     // پاشەکەوتکردنی وەسڵ لە سندوق
-    Route::post('/api/pos/checkout', [PosOrderController::class, 'store'])->name('pos.checkout')->middleware('verify_shift');
+    Route::post('/api/pos/checkout', [PosOrderController::class, 'store'])->name('pos.checkout');
     Route::get('/api/pos/my-invoices', [PosOrderController::class, 'myInvoices'])->name('pos.my_invoices');
 
     // پارەدانی دیجیتاڵ
-    Route::post('/api/payments/initiate', [SmartPaymentController::class, 'initiate'])->name('payment.initiate')->middleware('verify_shift');
-    Route::post('/api/payments/confirm-manual', [SmartPaymentController::class, 'confirmManual'])->name('payment.confirm_manual')->middleware('verify_shift');
+    Route::post('/api/payments/initiate', [SmartPaymentController::class, 'initiate'])->name('payment.initiate');
+    Route::post('/api/payments/confirm-manual', [SmartPaymentController::class, 'confirmManual'])->name('payment.confirm_manual');
     Route::get('/api/payments/status/{id}', [SmartPaymentController::class, 'checkApiStatus'])->name('payment.check_status');
 
     // سندوق
     Route::middleware([RoleOrPermissionMiddleware::class . ':pos.access'])->group(function () {
         Route::get('/pos', function() {
-        $settings = \Illuminate\Support\Facades\DB::table('store_settings')->pluck('value', 'key')->toArray();
+        $settings = \Illuminate\Support\Facades\DB::table('settings')->pluck('value', 'key')->toArray();
         return view('pos.index', compact('settings'));
     })->name('pos.index');
     });
@@ -82,6 +82,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware([RoleOrPermissionMiddleware::class . ':settings.manage'])->group(function () {
         Route::get('/settings', [AdvancedFeaturesController::class, 'settings'])->name('admin.settings.index');
         Route::post('/settings', [AdvancedFeaturesController::class, 'updateSettings'])->name('admin.settings.update');
+        Route::get('/reports/z-report/{shiftId}', [AdvancedFeaturesController::class, 'zReport'])->name('admin.reports.z_report');
         
         
     
@@ -98,11 +99,23 @@ Route::middleware(['auth'])->group(function () {
 
 
 
+
+
+
+
+
+
+
+
+
 Route::get('/reports/z-report/{shiftId?}', [App\Http\Controllers\Admin\ReportController::class, 'zReport'])
     ->name('admin.reports.z_report')
     ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);
 
-    
+Route::get('/reports/z-report/{shiftId?}', [App\Http\Controllers\Admin\ReportController::class, 'zReport'])
+    ->name('admin.reports.z_report')
+    ->middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:reports.view']);
+
 /* ACCESS_CONTROL_START */
 Route::middleware(['web', 'auth', 'App\Http\Middleware\RoleOrPermissionMiddleware:users.view'])->group(function () {
     Route::get('/access-control', [App\Http\Controllers\Admin\AccessControlController::class, 'index'])->name('admin.access.index');

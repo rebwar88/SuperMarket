@@ -52,7 +52,7 @@ class SmartPaymentController extends Controller
             'card_bank' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $tx = PaymentTransaction::findOrFail($validated['transaction_id']);
+        $tx = PaymentTransaction::where('id', $validated['transaction_id'])->where('user_id', Auth::id())->firstOrFail();
         $tx->update([
             'reference_no' => $validated['reference_no'],
             'status' => 'completed',
@@ -81,7 +81,7 @@ class SmartPaymentController extends Controller
 
     public function checkApiStatus(int $id): JsonResponse
     {
-        $tx = PaymentTransaction::findOrFail($id);
+        $tx = PaymentTransaction::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
         $fibGateway = new FibPaymentGateway();
 
         if ($tx->gateway_transaction_id) {
