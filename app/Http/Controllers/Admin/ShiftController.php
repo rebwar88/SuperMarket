@@ -25,7 +25,11 @@ class ShiftController extends Controller
             ->first();
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'shift' => $shift]);
+            return response()->json([
+            'success' => true,
+            'has_open_shift' => (bool) $shift,
+            'shift' => $shift,
+        ]);
         }
 
         return view('admin.shifts.current', compact('shift'));
@@ -37,9 +41,19 @@ class ShiftController extends Controller
     public function openShift(Request $request)
     {
         $request->validate([
-            'register_id' => 'required|uuid|exists:registers,id',
+            'register_id' => 'nullable|uuid|exists:registers,id',
             'opening_cash' => 'nullable|numeric|min:0'
         ]);
+
+        $userId = Auth::id();
+        $registerId = $request->input('register_id') ?: DB::table('registers')->value('id');
+
+        if (!$registerId) {
+            $msg = 'هیچ سندوقێک تۆمار نەکراوە. تکایە سەرەتا سندوقێک زیاد بکە.';
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg], 422)
+                : back()->with('error', $msg);
+        }
 
         $userId = Auth::id();
 
@@ -60,7 +74,7 @@ class ShiftController extends Controller
 
         DB::table('register_shifts')->insert([
             'id' => $shiftId,
-            'register_id' => $request->register_id,
+            'register_id' => $registerId,
             'user_id' => $userId,
             'opened_at' => now(),
             'opening_cash' => (float) $request->input('opening_cash', 0),

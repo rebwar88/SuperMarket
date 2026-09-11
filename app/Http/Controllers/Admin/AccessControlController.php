@@ -126,7 +126,7 @@ class AccessControlController extends Controller
 
         DB::table('model_has_roles')->insert([
             'role_id' => (int) $validated['role_id'],
-            'model_type' => 'App\\Models\\User',
+            'model_type' => \App\Domains\Auth\Models\User::class,
             'model_uuid' => $userId,
         ]);
 
@@ -161,7 +161,7 @@ class AccessControlController extends Controller
         DB::table('model_has_roles')->where('model_uuid', $id)->delete();
         DB::table('model_has_roles')->insert([
             'role_id' => (int) $validated['role_id'],
-            'model_type' => 'App\\Models\\User',
+            'model_type' => \App\Domains\Auth\Models\User::class,
             'model_uuid' => $id,
         ]);
 

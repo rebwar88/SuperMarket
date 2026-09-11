@@ -55,7 +55,7 @@ class PosOrderController extends Controller
             // ٢. دروستکردن یان دۆزینەوەی کڕیار ئەگەر ناوی نێردرابوو (بۆ مەبەستی قەرز)
             $customerId = null;
             if (!empty($request->customer_name)) {
-                $customer = DB::table('customers')->where('phone', $request->customer_phone)->first();
+                $customer = !empty($request->customer_phone) ? DB::table('customers')->where('phone', $request->customer_phone)->first() : null;
                 if ($customer) {
                     $customerId = $customer->id;
                 } else {

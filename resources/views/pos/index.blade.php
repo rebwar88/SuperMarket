@@ -872,18 +872,21 @@
         checkActiveShift();
 
         function submitOpenShift() {
-            const val = document.getElementById('input-open-cash').value;
-            fetch("{{ route('shift.open') }}", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}", "Accept": "application/json" },
-                body: JSON.stringify({ opening_cash: parseFloat(val) || 0 })
-            }).then(res => res.json()).then(data => { 
-                if (data.success) {
-                    document.getElementById('modal-start-shift').classList.add('hidden');
-                    showToast('شیفت بە سەرکەوتوویی دەستیپێکرد', 'success');
-                }
-            });
+    const val = document.getElementById('input-open-cash').value;
+    fetch("http://127.0.0.1:8000/api/shift/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || "i5PfWXyadbsLQzraoJP8qf3ykbbts5z6i4ap25o5", "Accept": "application/json" },
+        body: JSON.stringify({ opening_cash: parseFloat(val) || 0 })
+    }).then(res => res.json()).then(data => { 
+        if (data.success) {
+            document.getElementById('modal-start-shift').classList.add('hidden');
+            showToast('شیفت بە سەرکەوتوویی دەستیپێکرد', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.message || 'کێشەیەک ڕوویدا لە کردنەوەی شیفت', 'error');
         }
+    }).catch(() => showToast('کێشەیەک لە پەیوەندی سێرڤەر ڕوویدا', 'error'));
+}
 
         function openTempLogoutModal() { document.getElementById('modal-temp-logout').classList.remove('hidden'); }
         function closeTempLogoutModal() { document.getElementById('modal-temp-logout').classList.add('hidden'); }

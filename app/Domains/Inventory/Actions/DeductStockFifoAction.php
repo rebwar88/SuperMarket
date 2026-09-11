@@ -14,7 +14,11 @@ class DeductStockFifoAction
      * لێدەرکردنی ستۆک بەپێی کاتی هاتنی وەجبەکان و بەرواری بەسەرچوون (FIFO/FEFO)
      * و گەڕاندنەوەی تێچووی کۆی کاڵا فرۆشراوەکە (Total COGS)
      */
-    public function execute(string $productId, string $orderItemId, float $quantity): float
+    public function execute(string , string , float )
+    {
+        if ($quantity <= 0) {
+            throw new \Exception("بڕی کاڵا دەبێت لە سفر زیاتر بێت.");
+        }: float
     {
         $remainingQtyToDeduct = $quantity;
         $totalCost = 0.0;

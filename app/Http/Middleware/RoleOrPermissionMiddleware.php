@@ -56,6 +56,9 @@ class RoleOrPermissionMiddleware
         }
 
         // ئەگەر کاشێر بێت و مۆڵەتی نەبێت بۆ ئەم بەشە، ڕەوانەی POS دەکرێت
+        if ($request->routeIs('pos.index')) {
+            abort(403, 'دەسەڵاتی پێویستت نییە بۆ دەستپێگەیشتن بەم بەشە.');
+        }
         if (in_array('cashier', $userRoles, true) || in_array('کاشێر', $userRoles, true)) {
             return redirect()->route('pos.index');
         }
